@@ -4,9 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro de Estudiantes</title>
+    <title>Registro y Consulta de Estudiantes</title>
     <style>
-        /* Fondo espacial animado */
         body {
             background: linear-gradient(135deg, #0f0c1b 0%, #201335 50%, #0b162c 100%);
             background-size: 400% 400%;
@@ -35,13 +34,12 @@
             }
         }
 
-        /* Estructura principal en dos paneles */
         .container {
             display: flex;
             flex-direction: column;
             gap: 25px;
             width: 100%;
-            max-width: 1100px;
+            max-width: 1150px;
             z-index: 1;
         }
 
@@ -52,7 +50,6 @@
             }
         }
 
-        /* Paneles de Cristal (Glassmorphism) */
         .card {
             background: rgba(25, 18, 46, 0.45);
             backdrop-filter: blur(16px);
@@ -69,21 +66,19 @@
         }
 
         .table-panel {
-            flex: 1.6;
+            flex: 1.8;
             overflow-x: auto;
         }
 
         h2 {
             color: #ffffff;
             font-size: 24px;
-            letter-spacing: 1px;
             margin-top: 0;
             margin-bottom: 20px;
             text-transform: uppercase;
             text-shadow: 0 0 10px rgba(0, 229, 255, 0.6);
         }
 
-        /* Formulario */
         .form-group {
             margin-bottom: 15px;
             text-align: left;
@@ -95,7 +90,6 @@
             font-size: 12px;
             margin-bottom: 5px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
 
         input {
@@ -108,13 +102,31 @@
             font-size: 15px;
             outline: none;
             box-sizing: border-box;
-            transition: all 0.3s ease;
         }
 
         input:focus {
             border-color: #00e5ff;
             box-shadow: 0 0 12px rgba(0, 229, 255, 0.4);
-            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Estilos de la Barra de Búsqueda */
+        .search-container {
+            margin-bottom: 20px;
+        }
+
+        .search-form {
+            display: flex;
+            gap: 10px;
+        }
+
+        .search-input {
+            flex: 1;
+            border-color: rgba(138, 43, 226, 0.4);
+        }
+
+        .search-input:focus {
+            border-color: #8a2be2;
+            box-shadow: 0 0 12px rgba(138, 43, 226, 0.5);
         }
 
         /* Botones */
@@ -130,51 +142,54 @@
             font-size: 15px;
             font-weight: bold;
             text-transform: uppercase;
-            letter-spacing: 1px;
             display: block;
             box-sizing: border-box;
             text-decoration: none;
             text-align: center;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(0, 229, 255, 0.2);
         }
 
         button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0, 229, 255, 0.5);
             filter: brightness(1.1);
+        }
+
+        .btn-search {
+            width: auto;
+            padding: 0 25px;
+            background: linear-gradient(90deg, #8a2be2, #4a00e0);
         }
 
         .btn-clear {
             background: linear-gradient(90deg, #dc3545, #ff4757);
-            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.2);
             margin-top: 20px;
+        }
+
+        .alert-error {
+            background: rgba(255, 71, 87, 0.2);
+            border: 1px solid #ff4757;
+            color: #ff6b81;
+            padding: 12px;
+            border-radius: 10px;
             font-size: 13px;
-            padding: 10px;
+            font-weight: bold;
+            margin-bottom: 15px;
         }
 
-        .btn-clear:hover {
-            box-shadow: 0 6px 15px rgba(220, 53, 69, 0.4);
-        }
-
-        /* Tabla cyberpunk */
         table {
             width: 100%;
             border-collapse: collapse;
             color: #ffffff;
             font-size: 14px;
-            text-align: left;
         }
 
         th {
             background: rgba(0, 229, 255, 0.15);
             color: #00e5ff;
             padding: 12px;
-            font-weight: bold;
+            border-bottom: 2px solid rgba(0, 229, 255, 0.3);
             text-transform: uppercase;
             font-size: 12px;
-            letter-spacing: 0.5px;
-            border-bottom: 2px solid rgba(0, 229, 255, 0.3);
         }
 
         td {
@@ -185,7 +200,6 @@
 
         tr:hover td {
             background: rgba(255, 255, 255, 0.04);
-            color: #ffffff;
         }
 
         .empty-msg {
@@ -193,6 +207,22 @@
             font-style: italic;
             display: block;
             padding: 20px 0;
+        }
+
+        .btn-inline-clear {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ccc;
+            width: auto;
+            padding: 0 15px;
+            line-height: 44px;
+            font-size: 13px;
+            border-radius: 10px;
+            text-decoration: none;
+        }
+
+        .btn-inline-clear:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
         }
     </style>
 </head>
@@ -202,35 +232,39 @@
     <div class="container">
         <div class="card form-panel">
             <h2>Registro</h2>
+
+            {% if error_validacion %}
+            <div class="alert-error">⚠️ {{ error_validacion }}</div>
+            {% endif %}
+
             <form method="POST" action="/registrar">
-                <div class="form-group">
-                    <label>Documento de Identidad</label>
-                    <input type="text" name="documento" placeholder="Número de cédula o TI" required autocomplete="off"
-                        autofocus>
-                </div>
-                <div class="form-group">
-                    <label>Nombre Completo</label>
-                    <input type="text" name="nombre" placeholder="Nombre y apellidos" required autocomplete="off">
-                </div>
-                <div class="form-group">
-                    <label>Correo Electrónico</label>
-                    <input type="email" name="correo" placeholder="ejemplo@correo.com" required autocomplete="off">
-                </div>
-                <div class="form-group">
-                    <label>Programa de Formación</label>
-                    <input type="text" name="programa" placeholder="Nombre de la carrera/curso" required
-                        autocomplete="off">
-                </div>
-                <div class="form-group">
-                    <label>Ficha</label>
-                    <input type="text" name="ficha" placeholder="Código de ficha" required autocomplete="off">
-                </div>
+                <div class="form-group"><label>Documento de Identidad</label><input type="text" name="documento"
+                        placeholder="Solo números" required autocomplete="off"></div>
+                <div class="form-group"><label>Nombre Completo</label><input type="text" name="nombre"
+                        placeholder="Solo letras" required autocomplete="off"></div>
+                <div class="form-group"><label>Correo Electrónico</label><input type="text" name="correo"
+                        placeholder="ejemplo@correo.com" required autocomplete="off"></div>
+                <div class="form-group"><label>Programa de Formación</label><input type="text" name="programa"
+                        placeholder="Ej: ADSO" required autocomplete="off"></div>
+                <div class="form-group"><label>Ficha</label><input type="text" name="ficha" placeholder="Solo números"
+                        required autocomplete="off"></div>
                 <button type="submit">Matricular Estudiante</button>
             </form>
         </div>
 
         <div class="card table-panel">
             <h2>Estudiantes Matriculados</h2>
+
+            <div class="search-container">
+                <form method="GET" action="/" class="search-form">
+                    <input type="text" name="buscar" class="search-input" placeholder="Buscar por documento o nombre..."
+                        value="{{ busqueda_actual }}" autocomplete="off">
+                    <button type="submit" class="btn-search">Buscar</button>
+                    {% if busqueda_actual %}
+                    <a href="/" class="btn-inline-clear">X</a>
+                    {% endif %}
+                </form>
+            </div>
 
             {% if estudiantes %}
             <table>
@@ -257,7 +291,11 @@
             </table>
             <a href="/limpiar" class="btn-link btn-clear">Vaciar Listado</a>
             {% else %}
+            {% if busqueda_actual %}
+            <span class="empty-msg">No se encontraron resultados para "{{ busqueda_actual }}".</span>
+            {% else %}
             <span class="empty-msg">No hay estudiantes registrados en la base de datos provisional.</span>
+            {% endif %}
             {% endif %}
         </div>
     </div>
