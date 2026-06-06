@@ -68,8 +68,8 @@ def limpiar():
 # ==========================================
 @app.route("/juego")
 def juego():
-    # Renderiza directamente el entorno gráfico interactivo de JavaScript
-    return render_template("juego.html")
+    # CAMBIO AQUÍ: Ahora busca "juegos.html" para que coincida perfectamente
+    return render_template("juegos.html")
 
 if __name__ == "__main__":
     app.run(debug=True)
