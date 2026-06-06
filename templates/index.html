@@ -4,21 +4,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>¡Adivina el Número!</title>
+    <title>Registro de Estudiantes</title>
     <style>
         /* Fondo espacial animado */
         body {
             background: linear-gradient(135deg, #0f0c1b 0%, #201335 50%, #0b162c 100%);
             background-size: 400% 400%;
             animation: gradientBG 15s ease infinite;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Segoe UI', Roboto, sans-serif;
             display: flex;
-            height: 100vh;
+            min-height: 100vh;
             justify-content: center;
             align-items: center;
             margin: 0;
-            overflow: hidden;
-            position: relative;
+            padding: 20px;
+            box-sizing: border-box;
         }
 
         @keyframes gradientBG {
@@ -35,79 +35,89 @@
             }
         }
 
-        /* Efecto de estrellas de fondo */
-        body::before {
-            content: "";
-            position: absolute;
+        /* Estructura principal en dos paneles */
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
             width: 100%;
-            height: 100%;
-            top: 0;
-            left: 0;
-            background-image:
-                radial-gradient(white, rgba(255, 255, 255, .2) 2px, transparent 40px),
-                radial-gradient(white, rgba(255, 255, 255, .15) 1px, transparent 30px);
-            background-size: 550px 550px, 350px 350px;
-            background-position: 0 0, 40px 60px;
-            opacity: 0.4;
-            z-index: 0;
+            max-width: 1100px;
+            z-index: 1;
         }
 
-        /* Tarjeta de Cristal (Glassmorphism) */
+        @media (min-width: 768px) {
+            .container {
+                flex-direction: row;
+                align-items: flex-start;
+            }
+        }
+
+        /* Paneles de Cristal (Glassmorphism) */
         .card {
             background: rgba(25, 18, 46, 0.45);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 35px 40px;
-            border-radius: 24px;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37),
-                0 0 20px rgba(138, 43, 226, 0.2);
-            text-align: center;
-            width: 340px;
-            z-index: 1;
+            padding: 30px;
+            border-radius: 22px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37), 0 0 20px rgba(138, 43, 226, 0.15);
             box-sizing: border-box;
+        }
+
+        .form-panel {
+            flex: 1;
+        }
+
+        .table-panel {
+            flex: 1.6;
+            overflow-x: auto;
         }
 
         h2 {
             color: #ffffff;
-            font-size: 28px;
+            font-size: 24px;
             letter-spacing: 1px;
             margin-top: 0;
-            margin-bottom: 10px;
+            margin-bottom: 20px;
             text-transform: uppercase;
             text-shadow: 0 0 10px rgba(0, 229, 255, 0.6);
         }
 
-        p {
-            color: #b0a6ce;
-            font-size: 15px;
-            margin-bottom: 25px;
+        /* Formulario */
+        .form-group {
+            margin-bottom: 15px;
+            text-align: left;
         }
 
-        /* Input con estilo de neón */
+        label {
+            display: block;
+            color: #b0a6ce;
+            font-size: 12px;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
         input {
             padding: 12px;
             width: 100%;
-            background: rgba(255, 255, 255, 0.07);
-            border: 2px solid rgba(0, 229, 255, 0.3);
-            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 2px solid rgba(0, 229, 255, 0.2);
+            border-radius: 10px;
             color: #ffffff;
-            font-size: 18px;
-            font-weight: bold;
-            text-align: center;
+            font-size: 15px;
             outline: none;
             box-sizing: border-box;
             transition: all 0.3s ease;
-            margin-bottom: 20px;
         }
 
         input:focus {
             border-color: #00e5ff;
-            box-shadow: 0 0 15px rgba(0, 229, 255, 0.5);
-            background: rgba(255, 255, 255, 0.12);
+            box-shadow: 0 0 12px rgba(0, 229, 255, 0.4);
+            background: rgba(255, 255, 255, 0.1);
         }
 
-        /* Botón Probar (Cian/Azul Eléctrico) */
+        /* Botones */
         button,
         .btn-link {
             padding: 14px;
@@ -115,120 +125,141 @@
             background: linear-gradient(90deg, #007bff, #00e5ff);
             color: white;
             border: none;
-            border-radius: 12px;
+            border-radius: 10px;
             cursor: pointer;
-            font-size: 16px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            display: inline-block;
-            box-sizing: border-box;
-            text-decoration: none;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(0, 229, 255, 0.3);
-        }
-
-        button:hover,
-        .btn-link:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0, 229, 255, 0.6);
-            filter: brightness(1.1);
-        }
-
-        button:active,
-        .btn-link:active {
-            transform: translateY(1px);
-        }
-
-        /* Botón Reiniciar (Verde Esmeralda/Neón) */
-        .btn-restart {
-            background: linear-gradient(90deg, #11998e, #38ef7d);
-            box-shadow: 0 4px 15px rgba(56, 239, 125, 0.3);
-        }
-
-        .btn-restart:hover {
-            box-shadow: 0 6px 20px rgba(56, 239, 125, 0.6);
-        }
-
-        /* Contenedores de Mensajes de Feedback */
-        .msg {
-            margin-top: 20px;
-            padding: 12px;
-            border-radius: 12px;
             font-size: 15px;
             font-weight: bold;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            letter-spacing: 1px;
+            display: block;
+            box-sizing: border-box;
+            text-decoration: none;
+            text-align: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 229, 255, 0.2);
         }
 
-        @keyframes popIn {
-            0% {
-                transform: scale(0.8);
-                opacity: 0;
-            }
-
-            100% {
-                transform: scale(1);
-                opacity: 1;
-            }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 229, 255, 0.5);
+            filter: brightness(1.1);
         }
 
-        .error {
-            background-color: rgba(220, 53, 69, 0.2);
-            color: #ff6b81;
-            border: 1px solid rgba(220, 53, 69, 0.4);
-            box-shadow: 0 0 15px rgba(220, 53, 69, 0.15);
-        }
-
-        .success {
-            background-color: rgba(40, 167, 69, 0.2);
-            color: #2ed573;
-            border: 1px solid rgba(40, 167, 69, 0.4);
-            box-shadow: 0 0 20px rgba(40, 167, 69, 0.3);
-        }
-
-        .intentos-text {
-            color: #a094b7;
+        .btn-clear {
+            background: linear-gradient(90deg, #dc3545, #ff4757);
+            box-shadow: 0 4px 15px rgba(220, 53, 69, 0.2);
+            margin-top: 20px;
             font-size: 13px;
-            margin-top: 10px;
+            padding: 10px;
         }
 
-        .intentos-text strong {
+        .btn-clear:hover {
+            box-shadow: 0 6px 15px rgba(220, 53, 69, 0.4);
+        }
+
+        /* Tabla cyberpunk */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            color: #ffffff;
+            font-size: 14px;
+            text-align: left;
+        }
+
+        th {
+            background: rgba(0, 229, 255, 0.15);
             color: #00e5ff;
+            padding: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid rgba(0, 229, 255, 0.3);
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            color: #e2daf8;
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.04);
+            color: #ffffff;
+        }
+
+        .empty-msg {
+            color: #a094b7;
+            font-style: italic;
+            display: block;
+            padding: 20px 0;
         }
     </style>
 </head>
 
 <body>
 
-    <div class="card">
-        <h2>¿Adivinas?</h2>
-        <p>Piensa un número entre 1 y 100</p>
-
-        {% if gano %}
-        <div class="msg success">
-            {{ mensaje }}
+    <div class="container">
+        <div class="card form-panel">
+            <h2>Registro</h2>
+            <form method="POST" action="/registrar">
+                <div class="form-group">
+                    <label>Documento de Identidad</label>
+                    <input type="text" name="documento" placeholder="Número de cédula o TI" required autocomplete="off"
+                        autofocus>
+                </div>
+                <div class="form-group">
+                    <label>Nombre Completo</label>
+                    <input type="text" name="nombre" placeholder="Nombre y apellidos" required autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label>Correo Electrónico</label>
+                    <input type="email" name="correo" placeholder="ejemplo@correo.com" required autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label>Programa de Formación</label>
+                    <input type="text" name="programa" placeholder="Nombre de la carrera/curso" required
+                        autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label>Ficha</label>
+                    <input type="text" name="ficha" placeholder="Código de ficha" required autocomplete="off">
+                </div>
+                <button type="submit">Matricular Estudiante</button>
+            </form>
         </div>
-        {% if intentos %}
-        <p class="intentos-text">Lo lograste en <strong>{{ intentos }}</strong> intentos.</p>
-        {% endif %}
-        <a href="/reiniciar" class="btn-link btn-restart">Reiniciar juego</a>
-        {% else %}
-        <form method="POST">
-            <input type="number" name="intento" min="1" max="100" placeholder="Ej: 42" required autofocus>
-            <button type="submit">Probar</button>
-        </form>
 
-        {% if mensaje %}
-        <div class="msg error">
-            {{ mensaje }}
+        <div class="card table-panel">
+            <h2>Estudiantes Matriculados</h2>
+
+            {% if estudiantes %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Documento</th>
+                        <th>Nombre</th>
+                        <th>Correo</th>
+                        <th>Programa</th>
+                        <th>Ficha</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for est in estudiantes %}
+                    <tr>
+                        <td>{{ est.documento }}</td>
+                        <td>{{ est.nombre }}</td>
+                        <td>{{ est.correo }}</td>
+                        <td>{{ est.programa }}</td>
+                        <td>{{ est.ficha }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <a href="/limpiar" class="btn-link btn-clear">Vaciar Listado</a>
+            {% else %}
+            <span class="empty-msg">No hay estudiantes registrados en la base de datos provisional.</span>
+            {% endif %}
         </div>
-        {% if intentos %}
-        <p class="intentos-text">Llevas <strong>{{ intentos }}</strong> intentos.</p>
-        {% endif %}
-        {% endif %}
-        {% endif %}
     </div>
 
 </body>

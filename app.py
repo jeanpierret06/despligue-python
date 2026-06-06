@@ -1,39 +1,37 @@
-from flask import Flask, render_template, request, session
-import random
+from flask import Flask, render_template, request, redirect, url_for
 
 app = Flask(__name__)
-app.secret_key = "clave-super-secreta"  # Necesaria para manejar sesiones
 
-@app.route("/", methods=["GET", "POST"])
+# Base de datos temporal en memoria (compartida por todos los usuarios)
+LISTA_ESTUDIANTES = []
+
+@app.route("/", methods=["GET"])
 def index():
-    # Si no existe número en sesión, lo crea
-    if "numero" not in session:
-        session["numero"] = random.randint(1, 100)
-    if "veces" not in session:
-        session["veces"] = 0
+    # Muestra la página de inicio junto con los estudiantes guardados
+    return render_template("index.html", estudiantes=LISTA_ESTUDIANTES)
 
-    mensaje = ""
+@app.route("/registrar", methods=["POST"])
+def registrar():
+    # Captura los datos del formulario
+    nuevo_estudiante = {
+        'documento': request.form.get('documento'),
+        'nombre': request.form.get('nombre'),
+        'correo': request.form.get('correo'),
+        'programa': request.form.get('programa'),
+        'ficha': request.form.get('ficha')
+    }
     
-    if request.method == "POST":
-        try:
-            intento = int(request.form["intento"])
-            numero = session["numero"]
-            veces_actual = int(session.get("veces", 0))
-            veces_actual += 1
-            session["veces"] = veces_actual
-
-            if intento < numero:
-                mensaje = "El número es MAYOR."
-            elif intento > numero:
-                mensaje = "El número es MENOR."
-            else:
-                nombre = request.args.get("nombre", "")
-                mensaje = "¡Adivinaste! "+nombre+" lo lograste en " + str(session["veces"]) + " oportunidades. Se generó un nuevo número."
-                
-                session["numero"] = random.randint(1, 100)
-                session["veces"] = 0
+    # Valida que no se envíen campos vacíos antes de guardar
+    if all(nuevo_estudiante.values()):
+        LISTA_ESTUDIANTES.append(nuevo_estudiante)
         
-        except ValueError:
-            mensaje = "Ingresa un número válido."
+    return redirect(url_for('index'))
 
-    return render_template("index.html", mensaje=mensaje)
+@app.route("/limpiar")
+def limpiar():
+    # Vacía la lista por completo
+    LISTA_ESTUDIANTES.clear()
+    return redirect(url_for('index'))
+
+if __name__ == "__main__":
+    app.run(debug=True)
