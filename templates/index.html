@@ -4,14 +4,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro y Consulta de Estudiantes</title>
+    <title>Registro de Estudiantes</title>
     <style>
         body {
             background: linear-gradient(135deg, #0f0c1b 0%, #201335 50%, #0b162c 100%);
             background-size: 400% 400%;
             animation: gradientBG 15s ease infinite;
-            font-family: 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Segoe UI', sans-serif;
             display: flex;
+            flex-direction: column;
             min-height: 100vh;
             justify-content: center;
             align-items: center;
@@ -32,6 +33,36 @@
             100% {
                 background-position: 0% 50%;
             }
+        }
+
+        /* NAVBAR SUPERIOR */
+        .navbar {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            width: 100%;
+            max-width: 1150px;
+            z-index: 2;
+        }
+
+        .nav-item {
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: #fff;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 14px;
+            text-transform: uppercase;
+            transition: all 0.3s;
+        }
+
+        .nav-item:hover,
+        .nav-active {
+            background: linear-gradient(90deg, #007bff, #00e5ff);
+            border-color: transparent;
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.4);
         }
 
         .container {
@@ -57,7 +88,7 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
             padding: 30px;
             border-radius: 22px;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37), 0 0 20px rgba(138, 43, 226, 0.15);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
             box-sizing: border-box;
         }
 
@@ -81,7 +112,6 @@
 
         .form-group {
             margin-bottom: 15px;
-            text-align: left;
         }
 
         label {
@@ -99,7 +129,6 @@
             border: 2px solid rgba(0, 229, 255, 0.2);
             border-radius: 10px;
             color: #ffffff;
-            font-size: 15px;
             outline: none;
             box-sizing: border-box;
         }
@@ -109,7 +138,6 @@
             box-shadow: 0 0 12px rgba(0, 229, 255, 0.4);
         }
 
-        /* Estilos de la Barra de Búsqueda */
         .search-container {
             margin-bottom: 20px;
         }
@@ -119,17 +147,6 @@
             gap: 10px;
         }
 
-        .search-input {
-            flex: 1;
-            border-color: rgba(138, 43, 226, 0.4);
-        }
-
-        .search-input:focus {
-            border-color: #8a2be2;
-            box-shadow: 0 0 12px rgba(138, 43, 226, 0.5);
-        }
-
-        /* Botones */
         button,
         .btn-link {
             padding: 14px;
@@ -146,12 +163,6 @@
             box-sizing: border-box;
             text-decoration: none;
             text-align: center;
-            transition: all 0.3s ease;
-        }
-
-        button:hover {
-            transform: translateY(-2px);
-            filter: brightness(1.1);
         }
 
         .btn-search {
@@ -172,7 +183,6 @@
             padding: 12px;
             border-radius: 10px;
             font-size: 13px;
-            font-weight: bold;
             margin-bottom: 15px;
         }
 
@@ -198,10 +208,6 @@
             color: #e2daf8;
         }
 
-        tr:hover td {
-            background: rgba(255, 255, 255, 0.04);
-        }
-
         .empty-msg {
             color: #a094b7;
             font-style: italic;
@@ -215,54 +221,48 @@
             width: auto;
             padding: 0 15px;
             line-height: 44px;
-            font-size: 13px;
             border-radius: 10px;
             text-decoration: none;
-        }
-
-        .btn-inline-clear:hover {
-            background: rgba(255, 255, 255, 0.2);
-            color: #fff;
         }
     </style>
 </head>
 
 <body>
 
+    <nav class="navbar">
+        <a href="index.html" class="nav-item nav-active">Estudiantes</a>
+        <a href="juegos.html" class="nav-item">Zona de Juego</a>
+    </nav>
+
     <div class="container">
         <div class="card form-panel">
             <h2>Registro</h2>
-
             {% if error_validacion %}
             <div class="alert-error">⚠️ {{ error_validacion }}</div>
             {% endif %}
-
             <form method="POST" action="/registrar">
                 <div class="form-group"><label>Documento de Identidad</label><input type="text" name="documento"
-                        placeholder="Solo números" required autocomplete="off"></div>
-                <div class="form-group"><label>Nombre Completo</label><input type="text" name="nombre"
-                        placeholder="Solo letras" required autocomplete="off"></div>
-                <div class="form-group"><label>Correo Electrónico</label><input type="text" name="correo"
-                        placeholder="ejemplo@correo.com" required autocomplete="off"></div>
-                <div class="form-group"><label>Programa de Formación</label><input type="text" name="programa"
-                        placeholder="Ej: ADSO" required autocomplete="off"></div>
-                <div class="form-group"><label>Ficha</label><input type="text" name="ficha" placeholder="Solo números"
                         required autocomplete="off"></div>
+                <div class="form-group"><label>Nombre Completo</label><input type="text" name="nombre" required
+                        autocomplete="off"></div>
+                <div class="form-group"><label>Correo Electrónico</label><input type="text" name="correo" required
+                        autocomplete="off"></div>
+                <div class="form-group"><label>Programa de Formación</label><input type="text" name="programa" required
+                        autocomplete="off"></div>
+                <div class="form-group"><label>Ficha</label><input type="text" name="ficha" required autocomplete="off">
+                </div>
                 <button type="submit">Matricular Estudiante</button>
             </form>
         </div>
 
         <div class="card table-panel">
             <h2>Estudiantes Matriculados</h2>
-
             <div class="search-container">
                 <form method="GET" action="/" class="search-form">
                     <input type="text" name="buscar" class="search-input" placeholder="Buscar por documento o nombre..."
                         value="{{ busqueda_actual }}" autocomplete="off">
                     <button type="submit" class="btn-search">Buscar</button>
-                    {% if busqueda_actual %}
-                    <a href="/" class="btn-inline-clear">X</a>
-                    {% endif %}
+                    {% if busqueda_actual %} <a href="/" class="btn-inline-clear">X</a> {% endif %}
                 </form>
             </div>
 
@@ -291,15 +291,10 @@
             </table>
             <a href="/limpiar" class="btn-link btn-clear">Vaciar Listado</a>
             {% else %}
-            {% if busqueda_actual %}
-            <span class="empty-msg">No se encontraron resultados para "{{ busqueda_actual }}".</span>
-            {% else %}
-            <span class="empty-msg">No hay estudiantes registrados en la base de datos provisional.</span>
-            {% endif %}
+            <span class="empty-msg">No se registran alumnos matriculados.</span>
             {% endif %}
         </div>
     </div>
-
 </body>
 
 </html>
