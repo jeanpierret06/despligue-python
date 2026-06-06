@@ -182,9 +182,9 @@
 
         const rival = {
             x: canvas.width - 190, y: SUELO_Y - 36, radius: 36,
-            vx: 0, vy: 0, speed: 5.2, jumpForce: 13.0, // IA Buffeada en velocidad física
+            vx: 0, vy: 0, speed: 5.2, jumpForce: 13.0,
             isJumping: false, score: 0,
-            colorCamiseta: "#1e1e24", colorPiel: "#e0a96d", colorPantalon: "#d32f2f",
+            colorCamiseta: "#21262d", colorPiel: "#e0a96d", colorPantalon: "#d32f2f",
             kickTimer: 0, lookState: "normal", anguloPie: 0
         };
 
@@ -205,9 +205,9 @@
         });
 
         function lanzarConfeti(origenX) {
-            particulasConfeti = [];
+            partculasConfeti = [];
             for (let i = 0; i < 70; i++) {
-                particulasConfeti.push({
+                partculasConfeti.push({
                     x: origenX,
                     y: SUELO_Y - arcoAlto / 2 + (Math.random() * 60 - 30),
                     vx: (origenX < canvas.width / 2 ? 1 : -1) * (Math.random() * 8 + 4),
@@ -253,10 +253,9 @@
         }
 
         function update() {
-            // Si hay festejo de gol congelamos el juego pero movemos confeti
             if (congelarPorGol > 0) {
                 congelarPorGol--;
-                particulasConfeti.forEach(p => {
+                partculasConfeti.forEach(p => {
                     p.vy += 0.25; p.x += p.vx; p.y += p.vy; p.rotacion += p.vRot;
                 });
                 if (cartelGolTimer > 0) cartelGolTimer--;
@@ -264,18 +263,16 @@
                 return;
             }
 
-            // Gestión del Temporizador
             if (tiempoRestante > 0) {
                 framesContador++;
-                if (framesContador >= 60) { // 1 segundo aproximado
+                if (framesContador >= 60) {
                     tiempoRestante--;
                     framesContador = 0;
                 }
             } else if (tiempoRestante === 0 && player.score === rival.score && !modoGolDeOro) {
-                modoGolDeOro = true; // Empate definitivo: Entra gol de oro
+                modoGolDeOro = true;
             }
 
-            // Controles Usuario
             if (keys["a"] || keys["arrowleft"]) player.vx = -player.speed;
             else if (keys["d"] || keys["arrowright"]) player.vx = player.speed;
             else player.vx = 0;
@@ -289,18 +286,13 @@
             if (player.x - player.radius < arcoAncho) player.x = arcoAncho + player.radius;
             if (player.x + player.radius > canvas.width - arcoAncho) player.x = canvas.width - arcoAncho - player.radius;
 
-            // --- NUEVA: IA PREDICTIVA AVANZADA ---
-            // 1. Calcular punto de caída futuro estimado del balón (Intercepción Parabólica)
             let prediccionX = ball.x + (ball.vx * 12);
             if (ball.vy > 0) {
                 let pasosAlSuelo = Math.max(1, (SUELO_Y - ball.y) / Math.max(1, ball.vy));
                 prediccionX = ball.x + (ball.vx * pasosAlSuelo);
             }
-
-            // Restringir predicción para que la IA no se meta sola en su propio arco
             prediccionX = Math.min(canvas.width - arcoAncho - 10, Math.max(canvas.width / 2 - 30, prediccionX));
 
-            // 2. Control de desplazamiento inteligente
             let toleranciaIA = 15;
             if (rival.x < prediccionX - toleranciaIA) {
                 rival.vx = rival.speed;
@@ -310,29 +302,25 @@
                 rival.vx = 0;
             }
 
-            // 3. Mecánica de Cabezazos Aéreos Defensivos/Atacantes
             let distanciaHorizontalReal = ball.x - rival.x;
             if (ball.y < rival.y - 10 && ball.y > rival.y - 140 && Math.abs(distanciaHorizontalReal) < 65 && !rival.isJumping) {
-                if (Math.random() * 100 < 85) { // 85% de probabilidad de salto perfecto de despeje
+                if (Math.random() * 100 < 85) {
                     rival.vy = -rival.jumpForce;
                     rival.isJumping = true;
                 }
             }
 
-            // 4. Mecánica de Chute Ofensivo Inteligente
             if (ball.x < rival.x && distanciaHorizontalReal > -75 && ball.y > rival.y - 20 && rival.kickTimer === 0) {
-                rival.kickTimer = 12; // Patea con fuerza si tiene el arco enfrente
+                rival.kickTimer = 12;
             }
             actualizarEntidad(rival);
 
-            // Animación hinchas
             aficionados.forEach(af => {
                 af.offset += af.velocidadSalto;
                 let furor = Math.abs(ball.x - af.x) < 130 ? 12 : 2;
                 af.y = af.yBase + Math.sin(af.offset) * furor;
             });
 
-            // Físicas Balón
             ball.vy += GRAVEDAD * 0.78; ball.x += ball.vx; ball.y += ball.vy; ball.vx *= FRICCION;
             ball.angulo += ball.vx * 0.02;
 
@@ -341,13 +329,11 @@
 
             arcoIzquierdo.flex *= 0.88; arcoDerecho.flex *= 0.88;
 
-            // Colisión bordes rígidos
             if (ball.y - ball.radius < 0) { ball.y = ball.radius; ball.vy = -ball.vy * ball.bounce; }
             if (ball.y + ball.radius > SUELO_Y) { ball.y = SUELO_Y - ball.radius; ball.vy = -ball.vy * ball.bounce; }
             if (ball.x - ball.radius < 0) { ball.x = ball.radius; ball.vx = -ball.vx * ball.bounce; arcoIzquierdo.flex = -18; }
             if (ball.x + ball.radius > canvas.width) { ball.x = canvas.width - ball.radius; ball.vx = -ball.vx * ball.bounce; arcoDerecho.flex = 18; }
 
-            // Postes superiores
             if (ball.x < arcoAncho && ball.y + ball.radius >= arcoIzquierdo.y && ball.y < arcoIzquierdo.y + 12) {
                 ball.y = arcoIzquierdo.y - ball.radius; ball.vy = -ball.vy * ball.bounce;
             }
@@ -355,7 +341,6 @@
                 ball.y = arcoDerecho.y - ball.radius; ball.vy = -ball.vy * ball.bounce;
             }
 
-            // Colisiones Cuerpo
             [player, rival].forEach(p => {
                 let cuerpoIzquierda = p.x - 24; let cuerpoDerecha = p.x + 24;
                 let cuerpoTecho = p.y + 15; let cuerpoSuelo = SUELO_Y;
@@ -391,7 +376,6 @@
                 }
             });
 
-            // Detección e Inyección de Goles Espectaculares
             if (ball.x - ball.radius < arcoIzquierdo.x + arcoIzquierdo.w && ball.y > arcoIzquierdo.y + 10) {
                 rival.score++; ultimoAnotador = 'rival';
                 congelarPorGol = 100; cartelGolTimer = 100;
@@ -406,7 +390,7 @@
 
         function drawStadium() {
             let sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            sky.addColorStop(0, modoGolDeOro ? "#2a0808" : "#0a0f1d"); // El cielo cambia a rojo en muerte súbita
+            sky.addColorStop(0, modoGolDeOro ? "#2a0808" : "#0a0f1d");
             sky.addColorStop(0.6, "#141f36");
             sky.addColorStop(1, "#1a2a4a");
             ctx.fillStyle = sky; ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -464,64 +448,103 @@
             }
         }
 
-        // --- MEJORA RADICAL DE LA CABEZA Y ROSTRO (Estilo Caricatura 2.5D) ---
+        // --- REMASTERIZACIÓN DE JUGADORES (Estilo Premium 2.5D) ---
         function drawCharacter(c) {
             let esPlayer = (c === player);
 
-            ctx.fillStyle = c.colorCamiseta; ctx.fillRect(c.x - 13, c.y + 24, 26, 16);
-            ctx.fillStyle = "rgba(0,0,0,0.25)"; ctx.font = "bold 11px Arial";
-            ctx.fillText("10", esPlayer ? c.x - 10 : c.x + 2, c.y + 35);
-            ctx.fillStyle = c.colorPantalon; ctx.fillRect(c.x - 13, c.y + 40, 26, 8);
-            ctx.fillStyle = c.colorCamiseta; ctx.fillRect(c.x + (esPlayer ? -9 : 5), c.y + 48, 4, 5);
+            // Sombra en el suelo
+            ctx.fillStyle = "rgba(0,0,0,0.35)";
+            ctx.beginPath();
+            ctx.ellipse(c.x, SUELO_Y, 24, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
 
+            // Camiseta con Degradado Pro
+            let camisetaGrad = ctx.createLinearGradient(c.x - 13, c.y + 24, c.x + 13, c.y + 40);
+            camisetaGrad.addColorStop(0, c.colorCamiseta);
+            camisetaGrad.addColorStop(1, "#000000"); // Sombreado inferior
+            ctx.fillStyle = camisetaGrad;
+            ctx.fillRect(c.x - 14, c.y + 24, 28, 16);
+
+            // Número en la espalda/pecho
+            ctx.fillStyle = "rgba(255,255,255,0.85)";
+            ctx.font = "bold 12px 'Impact', sans-serif";
+            ctx.fillText("10", esPlayer ? c.x - 11 : c.x + 1, c.y + 36);
+
+            // Pantaloncillos
+            ctx.fillStyle = c.colorPantalon;
+            ctx.fillRect(c.x - 14, c.y + 40, 28, 8);
+
+            // Pierna base
+            ctx.fillStyle = c.colorPiel;
+            ctx.fillRect(c.x + (esPlayer ? -9 : 5), c.y + 48, 4, 5);
+
+            // Pie Dinámico con Zapatilla Detallada
             ctx.save();
             ctx.translate(c.x + (esPlayer ? 6 : -6), c.y + 48);
             ctx.rotate(c.anguloPie);
-            ctx.fillStyle = "#1c1917";
+
+            // Suela y Cuerpo del Tenis
+            ctx.fillStyle = esPlayer ? "#ccff00" : "#ff3d00"; // Color llamativo neón
             if (esPlayer) {
-                ctx.fillRect(0, 0, 16, 8); ctx.fillStyle = "#ccff00"; ctx.fillRect(2, 6, 12, 2);
+                ctx.fillRect(0, 0, 18, 9);
+                ctx.fillStyle = "#ffffff"; ctx.fillRect(2, 0, 4, 4); // Cordones artificiales
             } else {
-                ctx.fillRect(-16, 0, 16, 8); ctx.fillStyle = "#ff3d00"; ctx.fillRect(-14, 6, 12, 2);
+                ctx.fillRect(-18, 0, 18, 9);
+                ctx.fillStyle = "#ffffff"; ctx.fillRect(-6, 0, 4, 4);
             }
             ctx.restore();
 
-            // 1. Sombreado de profundidad e inyección de Orejas
-            ctx.fillStyle = "#cf9a63";
-            ctx.beginPath(); ctx.arc(esPlayer ? c.x - c.radius + 4 : c.x + c.radius - 4, c.y, 7, 0, Math.PI * 2); ctx.fill();
+            // Oreja trasera (Profundidad)
+            ctx.fillStyle = "#c58b54";
+            ctx.beginPath(); ctx.arc(esPlayer ? c.x - c.radius + 4 : c.x + c.radius - 4, c.y + 2, 6, 0, Math.PI * 2); ctx.fill();
 
-            // 2. Esfera principal de la Cabeza con degradado tridimensional esférico
-            let headGrad = ctx.createRadialGradient(c.x - 4, c.y - 8, 4, c.x, c.y, c.radius);
+            // Cabeza Esférica 3D Inteligente
+            let headGrad = ctx.createRadialGradient(c.x - 5, c.y - 10, 4, c.x, c.y, c.radius);
             headGrad.addColorStop(0, "#ffffff");
-            headGrad.addColorStop(0.3, "#fff0db");
-            headGrad.addColorStop(0.75, c.colorPiel);
-            headGrad.addColorStop(1, "#c58b54");
+            headGrad.addColorStop(0.2, "#fff0db");
+            headGrad.addColorStop(0.8, c.colorPiel);
+            headGrad.addColorStop(1, "#b07a48");
             ctx.fillStyle = headGrad;
             ctx.beginPath(); ctx.arc(c.x, c.y, c.radius, 0, Math.PI * 2); ctx.fill();
 
-            // Vincha / Banda deportiva en la frente
+            // Vincha Deportiva de la frente
             ctx.fillStyle = esPlayer ? "#1565c0" : "#d32f2f";
             ctx.fillRect(c.x - c.radius + 1, c.y - 18, c.radius * 2 - 2, 8);
 
-            ctx.fillStyle = "rgba(244, 67, 54, 0.25)";
-            ctx.beginPath(); ctx.arc(esPlayer ? c.x + 18 : c.x - 18, c.y + 4, 6, 0, Math.PI * 2); ctx.fill();
+            // Rubor en las mejillas animadas
+            ctx.fillStyle = "rgba(244, 67, 54, 0.2)";
+            ctx.beginPath(); ctx.arc(esPlayer ? c.x + 18 : c.x - 18, c.y + 6, 7, 0, Math.PI * 2); ctx.fill();
 
-            // Cabello estilizado con cresta
-            ctx.fillStyle = "#2d2d2d";
-            ctx.beginPath(); ctx.arc(c.x, c.y - 20, 18, Math.PI, 0); ctx.fill();
-            ctx.fillRect(esPlayer ? c.x - 20 : c.x + 16, c.y - 20, 4, 12);
+            // Pelo / Cresta
+            ctx.fillStyle = "#1e1e24";
+            ctx.beginPath(); ctx.arc(c.x, c.y - 22, 16, Math.PI, 0); ctx.fill();
 
-            // Ojos e Iris Detallados
+            // Ojos Expresivos con Puntos de Brillo (Glares)
             let ejeOjoX = esPlayer ? c.x + 10 : c.x - 24;
+
+            // Cejas Dinámicas
+            ctx.strokeStyle = "#000000"; ctx.lineWidth = 3; ctx.beginPath();
+            if (c.lookState === "loco") {
+                // Cejas inclinadas de furia/locura
+                ctx.moveTo(ejeOjoX - 2, c.y - 13); ctx.lineTo(ejeOjoX + 8, c.y - 10);
+                ctx.moveTo(ejeOjoX + 10, c.y - 10); ctx.lineTo(ejeOjoX + 18, c.y - 12);
+            } else {
+                ctx.moveTo(ejeOjoX - 2, c.y - 11); ctx.lineTo(ejeOjoX + 7, c.y - 11);
+                ctx.moveTo(ejeOjoX + 10, c.y - 11); ctx.lineTo(ejeOjoX + 18, c.y - 11);
+            }
+            ctx.stroke();
+
             if (c.lookState === "loco") {
                 ctx.fillStyle = "#fff";
                 ctx.beginPath(); ctx.arc(ejeOjoX, c.y - 4, 9, 0, Math.PI * 2); ctx.fill();
                 ctx.beginPath(); ctx.arc(ejeOjoX + 11, c.y - 2, 6, 0, Math.PI * 2); ctx.fill();
-                ctx.fillStyle = "#0288d1"; // Iris Azul loco
+                ctx.fillStyle = "#0288d1";
                 ctx.beginPath(); ctx.arc(ejeOjoX, c.y - 4, 4, 0, Math.PI * 2); ctx.fill();
                 ctx.beginPath(); ctx.arc(ejeOjoX + 11, c.y - 2, 2.5, 0, Math.PI * 2); ctx.fill();
                 ctx.fillStyle = "#000";
                 ctx.beginPath(); ctx.arc(ejeOjoX, c.y - 4, 1.5, 0, Math.PI * 2); ctx.fill();
-                ctx.fillStyle = "#ff5252"; ctx.fillRect(ejeOjoX + 2, c.y + 11, 7, 9);
+                // Boca abierta en grito
+                ctx.fillStyle = "#5d0000"; ctx.beginPath(); ctx.arc(ejeOjoX + 6, c.y + 11, 6, 0, Math.PI, false); ctx.fill();
             }
             else if (c.lookState === "asustado") {
                 ctx.fillStyle = "#fff";
@@ -530,23 +553,32 @@
                 ctx.fillStyle = "#000";
                 ctx.beginPath(); ctx.arc(ejeOjoX, c.y - 4, 3, 0, Math.PI * 2); ctx.fill();
                 ctx.beginPath(); ctx.arc(ejeOjoX + 12, c.y - 4, 3, 0, Math.PI * 2); ctx.fill();
-                ctx.fillStyle = "#3e2723"; ctx.beginPath(); ctx.arc(ejeOjoX + 6, c.y + 11, 7, 0, Math.PI * 2); ctx.fill();
+                // Boca asustada (O)
+                ctx.fillStyle = "#3e2723"; ctx.beginPath(); ctx.arc(ejeOjoX + 6, c.y + 11, 4, 0, Math.PI * 2); ctx.fill();
             }
             else {
+                // Ojos Normales Limpios
                 ctx.fillStyle = "#fff";
-                ctx.beginPath(); ctx.arc(ejeOjoX, c.y - 4, 6.5, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.arc(ejeOjoX + 13, c.y - 4, 6.5, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(ejeOjoX, c.y - 4, 7, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(ejeOjoX + 13, c.y - 4, 7, 0, Math.PI * 2); ctx.fill();
 
                 ctx.fillStyle = "#4e342e"; // Iris Castaño
-                ctx.beginPath(); ctx.arc(ejeOjoX + (esPlayer ? 1 : -1), c.y - 4, 3.5, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.arc(ejeOjoX + 13 + (esPlayer ? 1 : -1), c.y - 4, 3.5, 0, Math.PI * 2); ctx.fill();
+                let mirarX = esPlayer ? 1 : -1;
+                ctx.beginPath(); ctx.arc(ejeOjoX + mirarX, c.y - 4, 4, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(ejeOjoX + 13 + mirarX, c.y - 4, 4, 0, Math.PI * 2); ctx.fill();
 
                 ctx.fillStyle = "#000"; // Pupila
-                ctx.beginPath(); ctx.arc(ejeOjoX + (esPlayer ? 1 : -1), c.y - 4, 1.8, 0, Math.PI * 2); ctx.fill();
-                ctx.beginPath(); ctx.arc(ejeOjoX + 13 + (esPlayer ? 1 : -1), c.y - 4, 1.8, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(ejeOjoX + mirarX, c.y - 4, 2, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(ejeOjoX + 13 + mirarX, c.y - 4, 2, 0, Math.PI * 2); ctx.fill();
 
+                // Puntos de luz blanca (Efecto de brillo vivo)
+                ctx.fillStyle = "#fff";
+                ctx.beginPath(); ctx.arc(ejeOjoX + mirarX - 1, c.y - 6, 1, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(ejeOjoX + 12 + mirarX, c.y - 6, 1, 0, Math.PI * 2); ctx.fill();
+
+                // Sonrisa competitiva
                 ctx.strokeStyle = "#000"; ctx.lineWidth = 2.5; ctx.beginPath();
-                ctx.arc(ejeOjoX + 6, c.y + 5, 6, 0.1, Math.PI - 0.1); ctx.stroke();
+                ctx.arc(ejeOjoX + 6, c.y + 4, 6, 0.1, Math.PI - 0.1); ctx.stroke();
             }
         }
 
@@ -578,27 +610,60 @@
             drawStadium(); drawGoalpost(arcoIzquierdo, true); drawGoalpost(arcoDerecho, false);
             drawCharacter(player); drawCharacter(rival); drawBall();
 
-            // Dibujar partículas de confeti si hay gol activo
             if (congelarPorGol > 0) {
-                particulasConfeti.forEach(p => {
+                partculasConfeti.forEach(p => {
                     ctx.fillStyle = p.color;
                     ctx.save();
                     ctx.translate(p.x, p.y);
                     ctx.rotate(p.rotacion);
                     ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
-                    ctx.restore();
+                    ctx.save(); ctx.restore(); ctx.restore();
                 });
             }
 
-            // Tablero Central Remasterizado con Actualización de UI Externa
-            ctx.fillStyle = "#161b22"; ctx.fillRect(canvas.width / 2 - 70, 15, 140, 38);
-            ctx.strokeStyle = "#30363d"; ctx.lineWidth = 2; ctx.strokeRect(canvas.width / 2 - 70, 15, 140, 38);
-            ctx.fillStyle = "#4caf50"; ctx.font = "bold 20px 'Courier New', monospace";
+            // --- NUEVO TABLERO ELECTRÓNICO REMASTERIZADO ---
+            let centroX = canvas.width / 2;
+            let marcadorW = 200, marcadorH = 46, marcadorY = 12;
 
-            // Formatear texto del temporizador
-            let textoTiempo = modoGolDeOro ? "GOL ORO" : `${tiempoRestante}s`;
+            // Sombra y Cuerpo del Marcador
+            ctx.shadowColor = "rgba(0,0,0,0.6)"; ctx.shadowBlur = 12;
+            let marcadorGrad = ctx.createLinearGradient(centroX, marcadorY, centroX, marcadorY + marcadorH);
+            marcadorGrad.addColorStop(0, "#1f242d");
+            marcadorGrad.addColorStop(1, "#0d1117");
+            ctx.fillStyle = marcadorGrad;
+
+            // Dibujar rectángulo con esquinas redondeadas manualmente
+            ctx.beginPath();
+            ctx.roundRect(centroX - marcadorW / 2, marcadorY, marcadorW, marcadorH, 12);
+            ctx.fill();
+
+            // Borde con brillo Neón de fondo
+            ctx.shadowBlur = 0; // Reset
+            ctx.strokeStyle = "#30363d"; ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Goles Local (Izquierda) - Verde Neón
+            ctx.fillStyle = "#4caf50";
+            ctx.font = "bold 24px 'Impact', sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText(player.score, centroX - 65, marcadorY + 32);
+
+            // Goles Rival (Derecha) - Blanco/Gris Claro
+            ctx.fillStyle = "#f8f9fa";
+            ctx.fillText(rival.score, centroX + 65, marcadorY + 32);
+
+            // Divisor Central / Decorativo
+            ctx.fillStyle = "rgba(255,255,255,0.1)";
+            ctx.fillRect(centroX - 40, marcadorY + 8, 1, marcadorH - 16);
+            ctx.fillRect(centroX + 40, marcadorY + 8, 1, marcadorH - 16);
+
+            // Cronómetro Digital Central
+            let textoTiempo = modoGolDeOro ? "O RO" : `${tiempoRestante}s`;
             document.getElementById("ui-timer").innerText = textoTiempo;
-            ctx.fillText(`${player.score} [${textoTiempo}] ${rival.score}`, canvas.width / 2 - 62, 41);
+
+            ctx.fillStyle = modoGolDeOro ? "#ff3d00" : "#ffc107"; // Amarillo oro o rojo peligro
+            ctx.font = "bold 16px 'Courier New', monospace";
+            ctx.fillText(textoTiempo, centroX, marcadorY + 29);
 
             // --- CARTEL FLOTANTE DE GOL EXTREMO ---
             if (cartelGolTimer > 0) {
@@ -610,10 +675,11 @@
                 gradCartel.addColorStop(1, "#ff8f00");
                 ctx.fillStyle = gradCartel;
                 ctx.font = "bold 72px 'Impact', sans-serif";
+                ctx.textAlign = "center";
                 ctx.shadowColor = "rgba(0,0,0,0.5)";
                 ctx.shadowBlur = 10;
-                ctx.fillText("¡¡¡GOOOOOOL!!!", canvas.width / 2 - 210, 235);
-                ctx.shadowBlur = 0; // Reset
+                ctx.fillText("¡¡¡GOOOOOOL!!!", centroX, 235);
+                ctx.shadowBlur = 0;
             }
         }
 
