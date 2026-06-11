@@ -73,7 +73,15 @@ def index():
         estudiantes_visibles = [dict(zip(columnas, fila)) for fila in resultado]
         
     except Exception as e:
-        return f"Error de conexión a la base de datos: {str(e)}", 500
+        # VISUALIZADOR DE ERRORES EXPLICITO: Rompe el Error 500 y te muestra el daño real
+        return f"""
+        <div style="background-color: #ffe6e6; padding: 25px; border: 3px solid #ff3333; font-family: monospace; margin: 50px auto; max-width: 800px; border-radius: 8px;">
+            <h2 style="color: #cc0000; margin-top: 0;">⚠️ Detalle del Error en el Servidor</h2>
+            <p><strong>Excepción capturada:</strong> {str(e)}</p>
+            <hr style="border: 0; border-top: 1px solid #ff9999;">
+            <p style="color: #555;">Este texto te dirá si el problema es de autenticación (password), de red (timeout) o si falta alguna columna en PostgreSQL.</p>
+        </div>
+        """, 500
 
     return render_template(
         "index.html", 
