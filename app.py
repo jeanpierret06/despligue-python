@@ -10,30 +10,27 @@ app = Flask(__name__)
 # CONFIGURACIÓN Y CONEXIÓN A POSTGRESQL (PG8000 NATIVE REPARADO)
 # =================================================================
 def obtener_conexion_db():
-    """Selecciona la cadena adecuada automáticamente según el entorno."""
+    """Detecta el entorno y extrae los parámetros directamente de la URL."""
+    # En tu PC local usará la cadena externa por defecto (la larga con .render.com)
+    # En Render, leerá la variable que configuraste en su panel de control
+    cadena_conexion = os.environ.get('DATABASE_URL') or "postgresql://sena_t4sc_user:BRtyaeq8r7Jc7AKTlgRGrhN4Qiv2g1BF@dpg-d8f3fdurnols73am6030-a.oregon-postgres.render.com/sena_t4sc"
     
-    username = "sena_t4sc_user"
-    password = "BRtyaeq8r7Jc7AKTlgRGrhN4Qiv2g1BF"
-    database = "sena_t4sc"
-    port = 5432
+    url = urlparse(cadena_conexion)
     
-    # Render asigna automáticamente variables de entorno cuando el código corre en su nube
-    if os.environ.get('RENDER'):
-        # Si estamos en la nube de Render -> Usamos el host INTERNO (el corto)
-        host = "dpg-d8f3fdurnols73am6030-a"
-    else:
-        # Si estás en tu PC local (DBeaver/VS Code) -> Usamos el host EXTERNO (el largo)
-        host = "dpg-d8f3fdurnols73am6030-a.oregon-postgres.render.com"
-        
+    username = url.username
+    password = url.password
+    host = url.hostname
+    port = url.port or 5432
+    database = url.path.lstrip('/')
+    
     return Connection(
         user=username,
         password=password,
         host=host,
         port=port,
         database=database,
-        timeout=10
+        timeout=15
     )
-
 def validar_datos(datos):
     if not all(str(valor).strip() for valor in datos.values()):
         return "Todos los campos son obligatorios."
