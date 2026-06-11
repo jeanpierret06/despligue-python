@@ -1,23 +1,18 @@
 from flask import Flask, render_template, request, redirect, url_for
 import re
 import os
-import psycopg2
-from psycopg2.extras import RealDictCursor
+from pg8000.native import Connection, DatabaseError
 
 app = Flask(__name__)
 
-# ==========================================
-# CONFIGURACIÓN Y CONEXIÓN A POSTGRESQL
-# ==========================================
-# Reemplaza los valores de abajo con tus credenciales de Aiven/PostgreSQL si pruebas localmente.
-# En Render, se recomienda crear una Variable de Entorno llamada DATABASE_URL.
+# =================================================================
+# CONFIGURACIÓN Y CONEXIÓN A POSTGRESQL (PG8000 NATIVE)
+# =================================================================
 DATABASE_URL = os.environ.get('DATABASE_URL') or "postgresql://usuario:contraseña@host:puerto/nombre_bd"
 
 def obtener_conexion_db():
-    """Establece y retorna la conexión física con la base de datos PostgreSQL."""
-    # Usamos RealDictCursor para que los resultados actúen como diccionarios, igual que tu lista antigua
-    conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
-    return conn
+    """Establece la conexión utilizando el método from_url de pg8000.native."""
+    return Connection.from_url(DATABASE_URL)
 
 def validar_datos(datos):
     if not all(str(valor).strip() for valor in datos.values()):
@@ -41,26 +36,23 @@ def index():
     
     try:
         conn = obtener_conexion_db()
-        cursor = conn.cursor()
         
         if criterio:
-            # Consulta SQL con filtros de búsqueda parcial (LIKE) insensible a mayúsculas/minúsculas
+            # pg8000.native utiliza :1, :2 para los marcadores de posición posicionales
             query = """
                 SELECT documento, nombre, correo, programa, ficha 
                 FROM estudiantes 
-                WHERE LOWER(documento) LIKE %s OR LOWER(nombre) LIKE %s
+                WHERE LOWER(documento) LIKE :1 OR LOWER(nombre) LIKE :2
                 ORDER BY id DESC
             """
             valor_busqueda = f"%{criterio}%"
-            cursor.execute(query, (valor_busqueda, valor_busqueda))
+            resultado = conn.run(query, valor_busqueda, valor_busqueda)
         else:
-            # Traer todos los alumnos matriculados
             query = "SELECT documento, nombre, correo, programa, ficha FROM estudiantes ORDER BY id DESC"
-            cursor.execute(query)
+            resultado = conn.run(query)
             
-        estudiantes_visibles = cursor.fetchall()
-        cursor.close()
-        conn.close()
+        columnas = ['documento', 'nombre', 'correo', 'programa', 'ficha']
+        estudiantes_visibles = [dict(zip(columnas, fila)) for fila in resultado]
         
     except Exception as e:
         return f"Error de conexión a la base de datos: {str(e)}", 500
@@ -83,48 +75,36 @@ def registrar():
             'ficha': request.form.get('ficha', '').strip()
         }
         
-        # Validaciones de expresiones regulares
         error = validar_datos(datos_formulario)
         if error:
-            # Si hay error de formato, recuperamos los estudiantes actuales para no romper la vista
             conn = obtener_conexion_db()
-            cursor = conn.cursor()
-            cursor.execute("SELECT documento, nombre, correo, programa, ficha FROM estudiantes ORDER BY id DESC")
-            estudiantes_actuales = cursor.fetchall()
-            cursor.close()
-            conn.close()
-            
+            resultado = conn.run("SELECT documento, nombre, correo, programa, ficha FROM estudiantes ORDER BY id DESC")
+            columnas = ['documento', 'nombre', 'correo', 'programa', 'ficha']
+            estudiantes_actuales = [dict(zip(columnas, fila)) for fila in resultado]
             return render_template("index.html", estudiantes=estudiantes_actuales, error_validacion=error, busqueda_actual="")
         
-        # Inserción persistente en PostgreSQL
         conn = obtener_conexion_db()
-        cursor = conn.cursor()
         
-        # Comprobar primero si el documento o correo ya existen para evitar caídas por restricciones UNIQUE
-        cursor.execute("SELECT id FROM estudiantes WHERE documento = %s OR correo = %s", 
-                       (datos_formulario['documento'], datos_formulario['correo']))
-        if cursor.fetchone():
-            cursor.close()
-            conn.close()
-            return "El documento o el correo electrónico ya se encuentran registrados.", 400
+        # Validar duplicados usando marcadores de pg8000 (:1, :2)
+        existe = conn.run("SELECT id FROM estudiantes WHERE documento = :1 OR correo = :2", 
+                          datos_formulario['documento'], datos_formulario['correo'])
+        if existe:
+            conn = obtener_conexion_db()
+            resultado = conn.run("SELECT documento, nombre, correo, programa, ficha FROM estudiantes ORDER BY id DESC")
+            columnas = ['documento', 'nombre', 'correo', 'programa', 'ficha']
+            estudiantes_actuales = [dict(zip(columnas, fila)) for fila in resultado]
+            return render_template("index.html", estudiantes=estudiantes_actuales, error_validacion="El documento o correo ya existen.", busqueda_actual="")
 
         query = """
             INSERT INTO estudiantes (documento, nombre, correo, programa, ficha) 
-            VALUES (%s, %s, %s, %s, %s)
+            VALUES (:1, :2, :3, :4, :5)
         """
-        cursor.execute(query, (
-            datos_formulario['documento'],
-            datos_formulario['nombre'],
-            datos_formulario['correo'],
-            datos_formulario['programa'],
-            datos_formulario['ficha']
-        ))
-        
-        # Guardar físicamente los datos en el disco duro de PostgreSQL
-        conn.commit()
-        
-        cursor.close()
-        conn.close()
+        conn.run(query, 
+                 datos_formulario['documento'],
+                 datos_formulario['nombre'],
+                 datos_formulario['correo'],
+                 datos_formulario['programa'],
+                 datos_formulario['ficha'])
         
         return redirect(url_for('index'))
         
@@ -135,19 +115,11 @@ def registrar():
 def limpiar():
     try:
         conn = obtener_conexion_db()
-        cursor = conn.cursor()
-        
-        # Vacía la tabla por completo reinstanciando los contadores SERIAL
-        cursor.execute("TRUNCATE TABLE estudiantes RESTART IDENTITY CASCADE;")
-        conn.commit()
-        
-        cursor.close()
-        conn.close()
+        conn.run("TRUNCATE TABLE estudiantes RESTART IDENTITY CASCADE;")
     except Exception as e:
         return f"Error al limpiar la base de datos: {str(e)}", 500
         
     return redirect(url_for('index'))
-
 
 # ==========================================
 # VISTA 2: RUTA DEL JUEGO INTERACTIVO
