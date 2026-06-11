@@ -10,24 +10,25 @@ app = Flask(__name__)
 # CONFIGURACIÓN Y CONEXIÓN A POSTGRESQL (PG8000 NATIVE REPARADO)
 # =================================================================
 def obtener_conexion_db():
-    """Establece la conexión de forma directa usando las credenciales explícitas."""
+    """Establece la conexión de forma directa usando los parámetros externos corregidos."""
     
-    # Ponemos comillas a cada valor para que Python los reconozca como texto (Strings)
     username = "sena_t4sc_user"
     password = "BRtyaeq8r7Jc7AKTlgRGrhN4Qiv2g1BF"
     
-    # IMPORTANTE: Eliminamos el '@' inicial del host para evitar fallos de resolución de DNS
-    host = "dpg-d8f3fdurnols73am6030-a.oregon-postgres.render.com"
+    # CORRECCIÓN: Usamos el host externo de Render (sin el '-a' inicial)
+    host = "dpg-d8f3fdurnols73am6030-a.oregon-postgres.render.com" 
     
     port = 5432
     database = "sena_t4sc"
     
+    # Agregamos un tiempo de espera (timeout) para que si la BD no responde, no se quede colgado
     return Connection(
         user=username,
         password=password,
         host=host,
         port=port,
-        database=database
+        database=database,
+        timeout=10
     )
 
 def validar_datos(datos):
