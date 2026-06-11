@@ -44,10 +44,9 @@ def validar_datos(datos):
     return None
 
 def consultar_estudiantes(conn, criterio=None):
-    """Realiza la consulta usando 'documentoc' tal como está en la DB."""
+    """Consulta usando 'documentoc' y mapea manualmente por posición para evitar fallos de dict()."""
     try:
         if criterio:
-            # CORRECCIÓN: Se cambia 'documento' por 'documentoc' en el SELECT y WHERE
             query = """
                 SELECT documentoc, nombre, correo, programa, ficha 
                 FROM estudiantes 
@@ -57,20 +56,23 @@ def consultar_estudiantes(conn, criterio=None):
             valor_busqueda = f"%{criterio}%"
             resultado = conn.run(query, valor_busqueda, valor_busqueda)
         else:
-            # CORRECCIÓN: Se cambia 'documento' por 'documentoc'
             query = "SELECT documentoc, nombre, correo, programa, ficha FROM estudiantes ORDER BY id DESC"
             resultado = conn.run(query)
         
         if not resultado:
             return []
             
-        # El mapeo al diccionario sigue usando 'documento' para no romper tu archivo index.html
-        columnas = ['documento', 'nombre', 'correo', 'programa', 'ficha']
         estudiantes = []
-        
         for fila in resultado:
+            # LÓGICA ESTRICTA: Solo procesamos si es una tupla/lista con los 5 campos de datos reales
             if isinstance(fila, (list, tuple)) and len(fila) == 5:
-                estudiantes.append(dict(zip(columnas, fila)))
+                estudiantes.append({
+                    'documento': str(fila[0]),
+                    'nombre': str(fila[1]),
+                    'correo': str(fila[2]),
+                    'programa': str(fila[3]),
+                    'ficha': str(fila[4])
+                })
                 
         return estudiantes
     except Exception:
@@ -114,14 +116,14 @@ def registrar():
             estudiantes_actuales = consultar_estudiantes(conn)
             return render_template("index.html", estudiantes=estudiantes_actuales, error_validacion=error, busqueda_actual="")
         
-        # CORRECCIÓN: Se cambia 'documento' por 'documentoc' en la validación de duplicados
+        # Validación de duplicados apuntando a 'documentoc'
         existe = conn.run("SELECT id FROM estudiantes WHERE documentoc = :1 OR correo = :2", 
                           datos_formulario['documento'], datos_formulario['correo'])
-        if existe:
+        if && existe and isinstance(existe, (list, tuple)) and len(existe) > 0 and len(existe[0]) > 0:
             estudiantes_actuales = consultar_estudiantes(conn)
             return render_template("index.html", estudiantes=estudiantes_actuales, error_validacion="El documento o correo ya existen.", busqueda_actual="")
 
-        # CORRECCIÓN: Se cambia 'documento' por 'documentoc' en el INSERT
+        # Inserción apuntando a 'documentoc'
         query = """
             INSERT INTO estudiantes (documentoc, nombre, correo, programa, ficha) 
             VALUES (:1, :2, :3, :4, :5)
@@ -139,7 +141,7 @@ def registrar():
         return f"""
         <div style="background-color: #ffe6e6; padding: 25px; border: 3px solid #ff3333; font-family: monospace; margin: 50px auto; max-width: 800px; border-radius: 8px;">
             <h2 style="color: #cc0000; margin-top: 0;">⚠️ Error al registrar</h2>
-            <p><strong>Mensaje:</strong> {str(e)}</p>
+            <p><strong>Mensaje técnico real:</strong> {str(e)}</p>
         </div>
         """, 500
 
@@ -153,9 +155,6 @@ def limpiar():
         
     return redirect(url_for('index'))
 
-# ==========================================
-# VISTA 2: RUTA DEL JUEGO INTERACTIVO
-# ==========================================
 @app.route("/juego")
 def juego():
     return render_template("juegos.html")
