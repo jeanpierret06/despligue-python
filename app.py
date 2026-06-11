@@ -44,17 +44,14 @@ def validar_datos(datos):
     return None
 
 def formatear_resultados(resultado):
-    """Convierte de forma segura las filas de pg8000 en diccionarios controlando nulos."""
+    """Mapea las filas a diccionarios de forma directa y segura."""
     columnas = ['documento', 'nombre', 'correo', 'programa', 'ficha']
+    # Si la base de datos está vacía y retorna None o [], devolvemos lista vacía inmediatamente
     if not resultado:
         return []
     
-    estudiantes = []
-    for fila in resultado:
-        # Si la fila está vacía o no tiene la longitud de las columnas, la ignoramos
-        if getattr(fila, "__len__", lambda: 0)() == len(columnas):
-            estudiantes.append(dict(zip(columnas, fila)))
-    return estudiantes
+    # Construcción limpia: solo mapea si la fila tiene exactamente 5 columnas
+    return [dict(zip(columnas, fila)) for fila in resultado if isinstance(fila, (list, tuple)) and len(fila) == len(columnas)]
 
 # ==========================================
 # VISTA 1: CONTROL DE ESTUDIANTES (RAÍZ)
@@ -135,8 +132,8 @@ def registrar():
     except Exception as e:
         return f"""
         <div style="background-color: #ffe6e6; padding: 25px; border: 3px solid #ff3333; font-family: monospace; margin: 50px auto; max-width: 800px; border-radius: 8px;">
-            <h2 style="color: #cc0000; margin-top: 0;">⚠️ Error al registrar</h2>
-            <p><strong>Excepción:</strong> {str(e)}</p>
+            <h2 style="color: #cc0000; margin-top: 0;">⚠️ Error crítico detectado</h2>
+            <p><strong>Mensaje:</strong> {str(e)}</p>
         </div>
         """, 500
 
