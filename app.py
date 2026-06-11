@@ -134,8 +134,16 @@ def registrar():
         return redirect(url_for('index'))
         
     except Exception as e:
-        return render_template("error.html", error=str(e)), 500
-
+        # INTERCEPTOR: Rompe la pantalla 500 y muestra el mensaje real de la base de datos
+        return f"""
+        <div style="background-color: #ffe6e6; padding: 25px; border: 3px solid #ff3333; font-family: monospace; margin: 50px auto; max-width: 800px; border-radius: 8px;">
+            <h2 style="color: #cc0000; margin-top: 0;">⚠️ Error al Intentar Registrar Estudiante</h2>
+            <p><strong>Excepción exacta del backend:</strong> {str(e)}</p>
+            <hr style="border: 0; border-top: 1px solid #ff9999;">
+            <p style="color: #555;">Este mensaje te dirá qué dato o columna está rechazando PostgreSQL al procesar el INSERT.</p>
+        </div>
+        """, 500
+        
 @app.route("/limpiar")
 def limpiar():
     try:
