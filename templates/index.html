@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Estudiantes</title>
+    <style>
+        body {
+            background: #0f0c1b;
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* ==========================================
+           FONDO ANIMADO DE PARTÍCULAS (CSS PURO)
+           ========================================== */
+        .bg-particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            overflow: hidden;
+            background: linear-gradient(135deg, #0f0c1b 0%, #1a0f2e 50%, #071021 100%);
+        }
+
+        /* Creamos puntos flotantes simulando luces de ciudad lejanas */
+        .bg-particles::before,
+        .bg-particles::after {
+            content: '';
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            border-radius: 50%;
+            background: transparent;
+            /* Sombras múltiples para simular cientos de partículas */
+            box-shadow:
+                20vw 10vh #fff, 40vw 30vh rgba(0, 229, 255, 0.4), 80vw 20vh #fff,
+                15vw 70vh rgba(138, 43, 226, 0.4), 60vw 80vh #fff, 90vw 60vh rgba(0, 229, 255, 0.3),
+                30vw 50vh #fff, 70vw 40vh rgba(138, 43, 226, 0.3), 50vw 90vh #fff,
+                25vw 25vh rgba(0, 229, 255, 0.4), 75vw 75vh #fff, 85vw 15vh rgba(138, 43, 226, 0.5);
+            animation: floatParticles 25s linear infinite;
+        }
+
+        .bg-particles::after {
+            width: 2px;
+            height: 2px;
+            box-shadow:
+                10vw 40vh rgba(0, 229, 255, 0.3), 50vw 20vh #fff, 35vw 80vh rgba(138, 43, 226, 0.4),
+                65vw 15vh #fff, 85vw 85vh rgba(0, 229, 255, 0.5), 95vw 30vh #fff,
+                45vw 60vh rgba(138, 43, 226, 0.3), 75vw 50vh #fff, 20vw 95vh rgba(0, 229, 255, 0.4);
+            animation-duration: 40s;
+            animation-delay: -10s;
+        }
+
+        @keyframes floatParticles {
+            0% {
+                transform: translateY(0) scale(1);
+                opacity: 0.3;
+            }
+
+            50% {
+                opacity: 0.8;
+            }
+
+            100% {
+                transform: translateY(-100vh) scale(1.2);
+                opacity: 0.2;
+            }
+        }
+
+        /* ==========================================
+           ESTILOS DE LA ANIMACIÓN DE ENTRADA (PRELOADER)
+           ========================================== */
+        #preloader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background: #090611;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 1.2s cubic-bezier(0.25, 1, 0.5, 1), visibility 1.2s ease;
+        }
+
+        .preloader-content {
+            text-align: center;
+        }
+
+        .logo-animation {
+            color: #ffffff;
+            font-size: 3.8rem;
+            font-weight: 300;
+            letter-spacing: 16px;
+            margin: 0 0 15px 0;
+            text-transform: uppercase;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+            animation: pulseLogo 2.5s ease-in-out infinite;
+        }
+
+        .subtitle-animation {
+            color: #b0a6ce;
+            font-size: 10px;
+            letter-spacing: 6px;
+            margin: 0;
+            text-transform: uppercase;
+            opacity: 0;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 12px;
+            animation: fadeInSubtitle 1.8s ease-out forwards;
+            animation-delay: 0.7s;
+        }
+
+        /* Revelado con efecto de aproximación y enfoque */
+        .hidden-content {
+            opacity: 0;
+            transform: scale(0.90);
+            filter: blur(20px);
+            transition: opacity 1.8s cubic-bezier(0.215, 0.610, 0.355, 1),
+                transform 1.8s cubic-bezier(0.215, 0.610, 0.355, 1),
+                filter 1.5s ease-out;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 1;
+        }
+
+        .visible-content {
+            opacity: 1;
+            transform: scale(1);
+            filter: blur(0);
+        }
+
+        @keyframes fadeInSubtitle {
+            to {
+                opacity: 0.7;
+            }
+        }
+
+        @keyframes pulseLogo {
+
+            0%,
+            100% {
+                transform: scale(1);
+                text-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
+            }
+
+            50% {
+                transform: scale(1.05);
+                text-shadow: 0 0 40px rgba(0, 229, 255, 0.7);
+            }
+        }
+
+        /* ==========================================
+           INTERFAZ Y TARJETAS PREMIUM (GLASSMORPHISM)
+           ========================================== */
+        .navbar {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            width: 100%;
+            max-width: 1150px;
+            z-index: 2;
+        }
+
+        .nav-item {
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 13px;
+            text-transform: uppercase;
+            transition: all 0.4s;
+            letter-spacing: 1px;
+        }
+
+        .nav-item:hover,
+        .nav-active {
+            background: linear-gradient(90deg, #007bff, #00e5ff);
+            border-color: transparent;
+            color: #fff;
+            box-shadow: 0 0 20px rgba(0, 229, 255, 0.4);
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            width: 100%;
+            max-width: 1150px;
+            z-index: 1;
+        }
+
+        @media (min-width: 768px) {
+            .container {
+                flex-direction: row;
+                align-items: flex-start;
+            }
+        }
+
+        .card {
+            background: rgba(15, 12, 27, 0.55);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 35px;
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+            box-sizing: border-box;
+            transition: border-color 0.4s ease;
+        }
+
+        .card:hover {
+            border-color: rgba(0, 229, 255, 0.2);
+        }
+
+        .form-panel {
+            flex: 1;
+        }
+
+        .table-panel {
+            flex: 1.8;
+            overflow-x: auto;
+        }
+
+        h2 {
+            color: #ffffff;
+            font-size: 22px;
+            margin-top: 0;
+            margin-bottom: 25px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(0, 229, 255, 0.4);
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        label {
+            display: block;
+            color: #9d94be;
+            font-size: 11px;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        input {
+            padding: 14px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(0, 229, 255, 0.15);
+            border-radius: 12px;
+            color: #ffffff;
+            outline: none;
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+        }
+
+        input:focus {
+            border-color: #00e5ff;
+            background: rgba(255, 255, 255, 0.07);
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.3);
+        }
+
+        .search-container {
+            margin-bottom: 22px;
+        }
+
+        .search-form {
+            display: flex;
+            gap: 12px;
+        }
+
+        button,
+        .btn-link {
+            padding: 15px;
+            width: 100%;
+            background: linear-gradient(90deg, #007bff, #00e5ff);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            text-transform: uppercase;
+            display: block;
+            box-sizing: border-box;
+            text-decoration: none;
+            text-align: center;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+        }
+
+        button:hover,
+        .btn-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 229, 255, 0.4);
+        }
+
+        .btn-search {
+            width: auto;
+            padding: 0 30px;
+            background: linear-gradient(90deg, #8a2be2, #4a00e0);
+        }
+
+        .btn-search:hover {
+            box-shadow: 0 5px 15px rgba(138, 43, 226, 0.5);
+        }
+
+        .btn-clear {
+            background: linear-gradient(90deg, #dc3545, #ff4757);
+            margin-top: 25px;
+        }
+
+        .btn-clear:hover {
+            box-shadow: 0 5px 15px rgba(255, 71, 87, 0.4);
+        }
+
+        .alert-error {
+            background: rgba(255, 71, 87, 0.15);
+            border: 1px solid #ff4757;
+            color: #ff6b81;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 13px;
+            margin-bottom: 18px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            color: #ffffff;
+            font-size: 14px;
+        }
+
+        th {
+            background: rgba(0, 229, 255, 0.08);
+            color: #00e5ff;
+            padding: 14px;
+            border-bottom: 2px solid rgba(0, 229, 255, 0.25);
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 1px;
+        }
+
+        td {
+            padding: 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: #e2daf8;
+        }
+
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+            color: #ffffff;
+        }
+
+        .empty-msg {
+            color: #a094b7;
+            font-style: italic;
+            display: block;
+            padding: 25px 0;
+        }
+
+        .btn-inline-clear {
+            background: rgba(255, 255, 255, 0.08);
+            color: #ccc;
+            width: auto;
+            padding: 0 18px;
+            line-height: 46px;
+            border-radius: 12px;
+            text-decoration: none;
+            transition: background 0.3s;
+        }
+
+        .btn-inline-clear:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="bg-particles"></div>
+
+    <div id="preloader">
+        <div class="preloader-content">
+            <h1 class="logo-animation">VELAR</h1>
+            <p class="subtitle-animation">PREPARANDO UNA EXPERIENCIA EXCEPCIONAL</p>
+        </div>
+    </div>
+
+    <div id="main-content" class="hidden-content">
+        <nav class="navbar">
+            <a href="/" class="nav-item nav-active">Estudiantes</a>
+            <a href="/juego" class="nav-item">Zona de Juego</a>
+        </nav>
+
+        <div class="container">
+            <div class="card form-panel">
+                <h2>Registro</h2>
+                {% if error_validacion %}
+                <div class="alert-error">⚠️ {{ error_validacion }}</div>
+                {% endif %}
+                <form method="POST" action="/registrar">
+                    <div class="form-group">
+                        <label>Documento de Identidad</label>
+                        <input type="text" name="documento" required autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label>Nombre Completo</label>
+                        <input type="text" name="nombre" required autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label>Correo Electrónico</label>
+                        <input type="text" name="correo" required autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label>Programa de Formación</label>
+                        <input type="text" name="programa" required autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label>Ficha</label>
+                        <input type="text" name="ficha" required autocomplete="off">
+                    </div>
+                    <button type="submit">Matricular Estudiante</button>
+                </form>
+            </div>
+
+            <div class="card table-panel">
+                <h2>Estudiantes Matriculados</h2>
+                <div class="search-container">
+                    <form method="GET" action="/" class="search-form">
+                        <input type="text" name="buscar" class="search-input"
+                            placeholder="Buscar por documento o nombre..." value="{{ busqueda_actual }}"
+                            autocomplete="off">
+                        <button type="submit" class="btn-search">Buscar</button>
+                        {% if busqueda_actual %} <a href="/" class="btn-inline-clear">X</a> {% endif %}
+                    </form>
+                </div>
+
+                {% if estudiantes %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Documento</th>
+                            <th>Nombre</th>
+                            <th>Correo</th>
+                            <th>Programa</th>
+                            <th>Ficha</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for est in estudiantes %}
+                        <tr>
+                            <td>{{ est.documento }}</td>
+                            <td>{{ est.nombre }}</td>
+                            <td>{{ est.correo }}</td>
+                            <td>{{ est.programa }}</td>
+                            <td>{{ est.ficha }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <a href="/limpiar" class="btn-link btn-clear">Vaciar Base de Datos</a>
+                {% else %}
+                <span class="empty-msg">No se registran alumnos matriculados que coincidan con la búsqueda.</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                const preloader = document.getElementById('preloader');
+                const mainContent = document.getElementById('main-content');
+
+                // Ocultar preloader suavemente con desvanecimiento de opacidad
+                preloader.style.opacity = '0';
+                preloader.style.visibility = 'hidden';
+
+                // Disparar zoom, enfoque y opacidad de la interfaz real
+                mainContent.classList.remove('hidden-content');
+                mainContent.classList.add('visible-content');
+            }, 2700); // Duración exacta para sincronizar con los keyframes CSS
+        });
+    </script>
+</body>
+
+</html>

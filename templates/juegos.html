@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heads Football Championship</title>
+    <style>
+        body {
+            background: #0d1117;
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            color: #fff;
+            overflow-x: hidden;
+        }
+
+        .navbar {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 800px;
+            z-index: 2;
+        }
+
+        .nav-item {
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: #fff;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 14px;
+            text-transform: uppercase;
+            transition: all 0.3s;
+            flex: 1;
+            text-align: center;
+        }
+
+        .nav-item:hover,
+        .nav-active {
+            background: #2e7d32;
+            border-color: transparent;
+            box-shadow: 0 4px 12px rgba(46, 125, 50, 0.4);
+            color: #fff;
+        }
+
+        .card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            padding: 25px;
+            border-radius: 22px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
+            width: 100%;
+            max-width: 840px;
+            text-align: center;
+        }
+
+        h2 {
+            color: #4caf50;
+            font-size: 26px;
+            margin-top: 0;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        p {
+            color: #8b949e;
+            font-size: 13px;
+            margin-bottom: 20px;
+        }
+
+        #canvas-container {
+            position: relative;
+            background: #000;
+            border-radius: 20px;
+            overflow: hidden;
+            border: 4px solid #388e3c;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.8);
+            display: inline-block;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        .instructions {
+            margin-top: 15px;
+            font-size: 12px;
+            color: #8b949e;
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+        }
+
+        .highlight {
+            color: #4caf50;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="navbar">
+        <a href="/" class="nav-item">Estudiantes</a>
+        <a href="/juego" class="nav-item nav-active">Zona de Juego</a>
+    </nav>
+
+    <div class="card">
+        <h2>Heads Football Pro: Ultimate Edition</h2>
+        <p>IA Predictiva con cálculo de parábolas, temporizador oficial de 90s y explosión festiva de goles.</p>
+
+        <div id="canvas-container">
+            <canvas id="headBallCanvas" width="800" height="450"></canvas>
+        </div>
+
+        <div class="instructions">
+            <span>Tiempo: <span class="highlight" id="ui-timer">90s</span></span>
+            <span>Rival: <span class="highlight">IA Predictiva Avanzada</span></span>
+            <span>Efecto: <span class="highlight">Explosión de Confeti</span></span>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("headBallCanvas");
+        const ctx = canvas.getContext("2d");
+
+        const GRAVEDAD = 0.55;
+        const FRICCION = 0.985;
+        const SUELO_Y = canvas.height - 45;
+
+        const arcoAncho = 65, arcoAlto = 140;
+        const arcoIzquierdo = { x: 0, y: SUELO_Y - arcoAlto, w: arcoAncho, h: arcoAlto, flex: 0 };
+        const arcoDerecho = { x: canvas.width - arcoAncho, y: SUELO_Y - arcoAlto, w: arcoAncho, h: arcoAlto, flex: 0 };
+
+        // Variables de Gestión de Tiempo y Partida
+        let tiempoRestante = 90;
+        let framesContador = 0;
+        let modoGolDeOro = false;
+        let congelarPorGol = 0;
+        let cartelGolTimer = 0;
+        let ultimoAnotador = "";
+        let particulasConfeti = [];
+
+        // Hinchada animada
+        const aficionados = [];
+        const coloresHinchas = ["#fbc02d", "#1565c0", "#f5f5f5", "#c62828", "#455a64"];
+        function generarAficionados() {
+            for (let fila = 0; fila < 3; fila++) {
+                let yBase = 110 + fila * 24;
+                for (let x = 90; x < canvas.width - 90; x += 22) {
+                    aficionados.push({
+                        x: x + (Math.random() * 4 - 2),
+                        yBase: yBase, y: yBase,
+                        color: coloresHinchas[Math.floor(Math.random() * coloresHinchas.length)],
+                        offset: Math.random() * Math.PI * 2,
+                        velocidadSalto: 0.05 + Math.random() * 0.05
+                    });
+                }
+            }
+        }
+        generarAficionados();
+
+        // Jugadores con cabezas mejoradas de 36px de radio
+        const player = {
+            x: 190, y: SUELO_Y - 36, radius: 36,
+            vx: 0, vy: 0, speed: 6.4, jumpForce: 13.5,
+            isJumping: false, score: 0,
+            colorCamiseta: "#fbc02d", colorPiel: "#ffcc80", colorPantalon: "#1565c0",
+            kickTimer: 0, lookState: "normal", anguloPie: 0
+        };
+
+        const rival = {
+            x: canvas.width - 190, y: SUELO_Y - 36, radius: 36,
+            vx: 0, vy: 0, speed: 5.2, jumpForce: 13.0,
+            isJumping: false, score: 0,
+            colorCamiseta: "#21262d", colorPiel: "#e0a96d", colorPantalon: "#d32f2f",
+            kickTimer: 0, lookState: "normal", anguloPie: 0
+        };
+
+        const ball = {
+            x: canvas.width / 2, y: 120, radius: 22,
+            vx: 0, vy: 0, bounce: 0.70, angulo: 0,
+            historial: []
+        };
+
+        const keys = {};
+        window.addEventListener("keydown", (e) => {
+            if (e.key === " " || e.code === "Space") keys["space"] = true;
+            keys[e.key.toLowerCase()] = true;
+        });
+        window.addEventListener("keyup", (e) => {
+            if (e.key === " " || e.code === "Space") keys["space"] = false;
+            keys[e.key.toLowerCase()] = false;
+        });
+
+        function lanzarConfeti(origenX) {
+            partculasConfeti = [];
+            for (let i = 0; i < 70; i++) {
+                partculasConfeti.push({
+                    x: origenX,
+                    y: SUELO_Y - arcoAlto / 2 + (Math.random() * 60 - 30),
+                    vx: (origenX < canvas.width / 2 ? 1 : -1) * (Math.random() * 8 + 4),
+                    vy: Math.random() * -12 - 4,
+                    color: `hsl(${Math.random() * 360}, 90%, 60%)`,
+                    size: Math.random() * 5 + 4,
+                    rotacion: Math.random() * Math.PI,
+                    vRot: Math.random() * 0.2 - 0.1
+                });
+            }
+        }
+
+        function resetPosiciones(anotador) {
+            player.x = 190; player.y = SUELO_Y - player.radius; player.vx = 0; player.vy = 0;
+            rival.x = canvas.width - 190; rival.y = SUELO_Y - rival.radius; rival.vx = 0; rival.vy = 0;
+            ball.x = canvas.width / 2; ball.y = 100;
+            ball.vx = anotador === 'player' ? 4 : -4; ball.vy = -3;
+            ball.historial = [];
+        }
+
+        function actualizarEntidad(entidad) {
+            entidad.vy += GRAVEDAD; entidad.y += entidad.vy; entidad.x += entidad.vx;
+
+            if (entidad.y + entidad.radius >= SUELO_Y) {
+                entidad.y = SUELO_Y - entidad.radius; entidad.vy = 0; entidad.isJumping = false;
+            }
+
+            if (entidad.kickTimer > 0) {
+                entidad.kickTimer--;
+                let progreso = (12 - entidad.kickTimer) / 12;
+                entidad.anguloPie = Math.sin(progreso * Math.PI) * -1.4;
+            } else {
+                entidad.anguloPie = 0;
+            }
+
+            if (entidad.isJumping) {
+                entidad.lookState = "loco";
+            } else if (Math.abs(ball.x - entidad.x) < 90 && ball.y < entidad.y) {
+                entidad.lookState = "asustado";
+            } else {
+                entidad.lookState = "normal";
+            }
+        }
+
+        function update() {
+            if (congelarPorGol > 0) {
+                congelarPorGol--;
+                partculasConfeti.forEach(p => {
+                    p.vy += 0.25; p.x += p.vx; p.y += p.vy; p.rotacion += p.vRot;
+                });
+                if (cartelGolTimer > 0) cartelGolTimer--;
+                if (congelarPorGol === 0) resetPosiciones(ultimoAnotador);
+                return;
+            }
+
+            if (tiempoRestante > 0) {
+                framesContador++;
+                if (framesContador >= 60) {
+                    tiempoRestante--;
+                    framesContador = 0;
+                }
+            } else if (tiempoRestante === 0 && player.score === rival.score && !modoGolDeOro) {
+                modoGolDeOro = true;
+            }
+
+            if (keys["a"] || keys["arrowleft"]) player.vx = -player.speed;
+            else if (keys["d"] || keys["arrowright"]) player.vx = player.speed;
+            else player.vx = 0;
+
+            if ((keys["w"] || keys["arrowup"]) && !player.isJumping) {
+                player.vy = -player.jumpForce; player.isJumping = true;
+            }
+            if (keys["space"] && player.kickTimer === 0) player.kickTimer = 12;
+
+            actualizarEntidad(player);
+            if (player.x - player.radius < arcoAncho) player.x = arcoAncho + player.radius;
+            if (player.x + player.radius > canvas.width - arcoAncho) player.x = canvas.width - arcoAncho - player.radius;
+
+            let prediccionX = ball.x + (ball.vx * 12);
+            if (ball.vy > 0) {
+                let pasosAlSuelo = Math.max(1, (SUELO_Y - ball.y) / Math.max(1, ball.vy));
+                prediccionX = ball.x + (ball.vx * pasosAlSuelo);
+            }
+            prediccionX = Math.min(canvas.width - arcoAncho - 10, Math.max(canvas.width / 2 - 30, prediccionX));
+
+            let toleranciaIA = 15;
+            if (rival.x < prediccionX - toleranciaIA) {
+                rival.vx = rival.speed;
+            } else if (rival.x > prediccionX + toleranciaIA) {
+                rival.vx = -rival.speed;
+            } else {
+                rival.vx = 0;
+            }
+
+            let distanciaHorizontalReal = ball.x - rival.x;
+            if (ball.y < rival.y - 10 && ball.y > rival.y - 140 && Math.abs(distanciaHorizontalReal) < 65 && !rival.isJumping) {
+                if (Math.random() * 100 < 85) {
+                    rival.vy = -rival.jumpForce;
+                    rival.isJumping = true;
+                }
+            }
+
+            if (ball.x < rival.x && distanciaHorizontalReal > -75 && ball.y > rival.y - 20 && rival.kickTimer === 0) {
+                rival.kickTimer = 12;
+            }
+            actualizarEntidad(rival);
+
+            aficionados.forEach(af => {
+                af.offset += af.velocidadSalto;
+                let furor = Math.abs(ball.x - af.x) < 130 ? 12 : 2;
+                af.y = af.yBase + Math.sin(af.offset) * furor;
+            });
+
+            ball.vy += GRAVEDAD * 0.78; ball.x += ball.vx; ball.y += ball.vy; ball.vx *= FRICCION;
+            ball.angulo += ball.vx * 0.02;
+
+            ball.historial.push({ x: ball.x, y: ball.y });
+            if (ball.historial.length > 5) ball.historial.shift();
+
+            arcoIzquierdo.flex *= 0.88; arcoDerecho.flex *= 0.88;
+
+            if (ball.y - ball.radius < 0) { ball.y = ball.radius; ball.vy = -ball.vy * ball.bounce; }
+            if (ball.y + ball.radius > SUELO_Y) { ball.y = SUELO_Y - ball.radius; ball.vy = -ball.vy * ball.bounce; }
+            if (ball.x - ball.radius < 0) { ball.x = ball.radius; ball.vx = -ball.vx * ball.bounce; arcoIzquierdo.flex = -18; }
+            if (ball.x + ball.radius > canvas.width) { ball.x = canvas.width - ball.radius; ball.vx = -ball.vx * ball.bounce; arcoDerecho.flex = 18; }
+
+            if (ball.x < arcoAncho && ball.y + ball.radius >= arcoIzquierdo.y && ball.y < arcoIzquierdo.y + 12) {
+                ball.y = arcoIzquierdo.y - ball.radius; ball.vy = -ball.vy * ball.bounce;
+            }
+            if (ball.x > canvas.width - arcoAncho && ball.y + ball.radius >= arcoDerecho.y && ball.y < arcoDerecho.y + 12) {
+                ball.y = arcoDerecho.y - ball.radius; ball.vy = -ball.vy * ball.bounce;
+            }
+
+            [player, rival].forEach(p => {
+                let cuerpoIzquierda = p.x - 24; let cuerpoDerecha = p.x + 24;
+                let cuerpoTecho = p.y + 15; let cuerpoSuelo = SUELO_Y;
+
+                if (ball.x + ball.radius > cuerpoIzquierda && ball.x - ball.radius < cuerpoDerecha &&
+                    ball.y + ball.radius > cuerpoTecho && ball.y - ball.radius < cuerpoSuelo) {
+                    if (ball.x < p.x) {
+                        ball.x = cuerpoIzquierda - ball.radius - 1; ball.vx = -Math.abs(ball.vx) * ball.bounce - 1.5;
+                    } else {
+                        ball.x = cuerpoDerecha + ball.radius + 1; ball.vx = Math.abs(ball.vx) * ball.bounce + 1.5;
+                    }
+                }
+
+                let dx = ball.x - p.x; let dy = ball.y - p.y;
+                let distancia = Math.sqrt(dx * dx + dy * dy);
+                let sumaRadios = ball.radius + p.radius;
+
+                if (distancia < sumaRadios && ball.y <= p.y + 15) {
+                    let nx = dx / distancia; let ny = dy / distancia;
+                    ball.x = p.x + nx * (sumaRadios + 1); ball.y = p.y + ny * (sumaRadios + 1);
+                    let empuje = 7.8;
+                    ball.vx = nx * empuje + (p.vx * 0.42); ball.vy = ny * empuje + (p.vy * 0.42);
+                }
+
+                if (p.kickTimer > 0) {
+                    let esPlayer = (p === player);
+                    let alcancePieX = esPlayer ? p.x + 22 : p.x - 52;
+                    let rangoChuteAncho = 32;
+                    if (ball.x + ball.radius > alcancePieX && ball.x - ball.radius < alcancePieX + rangoChuteAncho &&
+                        ball.y + ball.radius > p.y + 25 && ball.y - ball.radius < SUELO_Y) {
+                        ball.vx = esPlayer ? 17.5 : -17.5; ball.vy = -6.5; p.lookState = "loco";
+                    }
+                }
+            });
+
+            if (ball.x - ball.radius < arcoIzquierdo.x + arcoIzquierdo.w && ball.y > arcoIzquierdo.y + 10) {
+                rival.score++; ultimoAnotador = 'rival';
+                congelarPorGol = 100; cartelGolTimer = 100;
+                lanzarConfeti(arcoIzquierdo.w);
+            }
+            if (ball.x + ball.radius > arcoDerecho.x && ball.y > arcoDerecho.y + 10) {
+                player.score++; ultimoAnotador = 'player';
+                congelarPorGol = 100; cartelGolTimer = 100;
+                lanzarConfeti(arcoDerecho.x);
+            }
+        }
+
+        function drawStadium() {
+            let sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            sky.addColorStop(0, modoGolDeOro ? "#2a0808" : "#0a0f1d");
+            sky.addColorStop(0.6, "#141f36");
+            sky.addColorStop(1, "#1a2a4a");
+            ctx.fillStyle = sky; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.strokeStyle = "rgba(255,255,255,0.08)"; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(80, 180); ctx.lineTo(40, 0); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(canvas.width - 80, 180); ctx.lineTo(canvas.width - 40, 0); ctx.stroke();
+
+            dibujarFocoLED(40, 25); dibujarFocoLED(canvas.width - 40, 25);
+
+            ctx.fillStyle = "#21262d"; ctx.fillRect(70, 100, canvas.width - 140, 80);
+            ctx.strokeStyle = "rgba(255,255,255,0.15)"; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(70, 100); ctx.lineTo(canvas.width - 70, 100); ctx.stroke();
+
+            aficionados.forEach(af => {
+                ctx.fillStyle = af.color; ctx.beginPath(); ctx.arc(af.x, af.y, 6, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = "#ffcc80"; ctx.beginPath(); ctx.arc(af.x, af.y - 6, 4, 0, Math.PI * 2); ctx.fill();
+            });
+
+            ctx.fillStyle = "#30363d"; ctx.fillRect(0, 180, canvas.width, SUELO_Y - 180);
+            ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.fillRect(0, SUELO_Y, canvas.width, 10);
+
+            const anchoFranja = 45;
+            for (let x = 0; x < canvas.width; x += anchoFranja) {
+                ctx.fillStyle = (Math.floor(x / anchoFranja) % 2 === 0) ? "#2e7d32" : "#388e3c";
+                ctx.fillRect(x, SUELO_Y, anchoFranja, canvas.height - SUELO_Y);
+            }
+            ctx.fillStyle = "rgba(255,255,255,0.5)"; ctx.fillRect(0, SUELO_Y, canvas.width, 3);
+        }
+
+        function dibujarFocoLED(x, y) {
+            let glow = ctx.createRadialGradient(x, y, 2, x, y, 60);
+            glow.addColorStop(0, "rgba(255, 255, 255, 0.4)");
+            glow.addColorStop(0.2, "rgba(135, 206, 250, 0.15)");
+            glow.addColorStop(1, "rgba(0,0,0,0)");
+            ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(x, y, 60, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = "#ffffff"; ctx.fillRect(x - 15, y - 5, 30, 10);
+        }
+
+        function drawGoalpost(arco, esIzquierdo) {
+            ctx.strokeStyle = "#f8f9fa"; ctx.lineWidth = 5;
+            ctx.strokeRect(arco.x, arco.y, arco.w, arco.h);
+
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.22)"; ctx.lineWidth = 1.2;
+            let objetivoFlex = arco.flex;
+
+            for (let y = arco.y; y <= SUELO_Y; y += 12) {
+                ctx.beginPath();
+                if (esIzquierdo) {
+                    ctx.moveTo(arco.x, y); ctx.quadraticCurveTo(arco.x + objetivoFlex, y, arco.x + arco.w, y);
+                } else {
+                    ctx.moveTo(arco.x + arco.w, y); ctx.quadraticCurveTo(arco.x + arco.w + objetivoFlex, y, arco.x, y);
+                }
+                ctx.stroke();
+            }
+        }
+
+        // --- REMASTERIZACIÓN DE JUGADORES (Estilo Premium 2.5D) ---
+        function drawCharacter(c) {
+            let esPlayer = (c === player);
+
+            // Sombra en el suelo
+            ctx.fillStyle = "rgba(0,0,0,0.35)";
+            ctx.beginPath();
+            ctx.ellipse(c.x, SUELO_Y, 24, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Camiseta con Degradado Pro
+            let camisetaGrad = ctx.createLinearGradient(c.x - 13, c.y + 24, c.x + 13, c.y + 40);
+            camisetaGrad.addColorStop(0, c.colorCamiseta);
+            camisetaGrad.addColorStop(1, "#000000"); // Sombreado inferior
+            ctx.fillStyle = camisetaGrad;
+            ctx.fillRect(c.x - 14, c.y + 24, 28, 16);
+
+            // Número en la espalda/pecho
+            ctx.fillStyle = "rgba(255,255,255,0.85)";
+            ctx.font = "bold 12px 'Impact', sans-serif";
+            ctx.fillText("10", esPlayer ? c.x - 11 : c.x + 1, c.y + 36);
+
+            // Pantaloncillos
+            ctx.fillStyle = c.colorPantalon;
+            ctx.fillRect(c.x - 14, c.y + 40, 28, 8);
+
+            // Pierna base
+            ctx.fillStyle = c.colorPiel;
+            ctx.fillRect(c.x + (esPlayer ? -9 : 5), c.y + 48, 4, 5);
+
+            // Pie Dinámico con Zapatilla Detallada
+            ctx.save();
+            ctx.translate(c.x + (esPlayer ? 6 : -6), c.y + 48);
+            ctx.rotate(c.anguloPie);
+
+            // Suela y Cuerpo del Tenis
+            ctx.fillStyle = esPlayer ? "#ccff00" : "#ff3d00"; // Color llamativo neón
+            if (esPlayer) {
+                ctx.fillRect(0, 0, 18, 9);
+                ctx.fillStyle = "#ffffff"; ctx.fillRect(2, 0, 4, 4); // Cordones artificiales
+            } else {
+                ctx.fillRect(-18, 0, 18, 9);
+                ctx.fillStyle = "#ffffff"; ctx.fillRect(-6, 0, 4, 4);
+            }
+            ctx.restore();
+
+            // Oreja trasera (Profundidad)
+            ctx.fillStyle = "#c58b54";
+            ctx.beginPath(); ctx.arc(esPlayer ? c.x - c.radius + 4 : c.x + c.radius - 4, c.y + 2, 6, 0, Math.PI * 2); ctx.fill();
+
+            // Cabeza Esférica 3D Inteligente
+            let headGrad = ctx.createRadialGradient(c.x - 5, c.y - 10, 4, c.x, c.y, c.radius);
+            headGrad.addColorStop(0, "#ffffff");
+            headGrad.addColorStop(0.2, "#fff0db");
+            headGrad.addColorStop(0.8, c.colorPiel);
+            headGrad.addColorStop(1, "#b07a48");
+            ctx.fillStyle = headGrad;
+            ctx.beginPath(); ctx.arc(c.x, c.y, c.radius, 0, Math.PI * 2); ctx.fill();
+
+            // Vincha Deportiva de la frente
+            ctx.fillStyle = esPlayer ? "#1565c0" : "#d32f2f";
+            ctx.fillRect(c.x - c.radius + 1, c.y - 18, c.radius * 2 - 2, 8);
+
+            // Rubor en las mejillas animadas
+            ctx.fillStyle = "rgba(244, 67, 54, 0.2)";
+            ctx.beginPath(); ctx.arc(esPlayer ? c.x + 18 : c.x - 18, c.y + 6, 7, 0, Math.PI * 2); ctx.fill();
+
+            // Pelo / Cresta
+            ctx.fillStyle = "#1e1e24";
+            ctx.beginPath(); ctx.arc(c.x, c.y - 22, 16, Math.PI, 0); ctx.fill();
+
+            // Ojos Expresivos con Puntos de Brillo (Glares)
+            let ejeOjoX = esPlayer ? c.x + 10 : c.x - 24;
+
+            // Cejas Dinámicas
+            ctx.strokeStyle = "#000000"; ctx.lineWidth = 3; ctx.beginPath();
+            if (c.lookState === "loco") {
+                // Cejas inclinadas de furia/locura
+                ctx.moveTo(ejeOjoX - 2, c.y - 13); ctx.lineTo(ejeOjoX + 8, c.y - 10);
+                ctx.moveTo(ejeOjoX + 10, c.y - 10); ctx.lineTo(ejeOjoX + 18, c.y - 12);
+            } else {
+                ctx.moveTo(ejeOjoX - 2, c.y - 11); ctx.lineTo(ejeOjoX + 7, c.y - 11);
+                ctx.moveTo(ejeOjoX + 10, c.y - 11); ctx.lineTo(ejeOjoX + 18, c.y - 11);
+            }
+            ctx.stroke();
+
+            if (c.lookState === "loco") {
+                ctx.fillStyle = "#fff";
+                ctx.beginPath(); ctx.arc(ejeOjoX, c.y - 4, 9, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(ejeOjoX + 11, c.y - 2, 6, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = "#0288d1";
+                ctx.beginPath(); ctx.arc(ejeOjoX, c.y - 4, 4, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(ejeOjoX + 11, c.y - 2, 2.5, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = "#000";
+                ctx.beginPath(); ctx.arc(ejeOjoX, c.y - 4, 1.5, 0, Math.PI * 2); ctx.fill();
+                // Boca abierta en grito
+                ctx.fillStyle = "#5d0000"; ctx.beginPath(); ctx.arc(ejeOjoX + 6, c.y + 11, 6, 0, Math.PI, false); ctx.fill();
+            }
+            else if (c.lookState === "asustado") {
+                ctx.fillStyle = "#fff";
+                ctx.beginPath(); ctx.arc(ejeOjoX, c.y - 4, 10, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(ejeOjoX + 12, c.y - 4, 10, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = "#000";
+                ctx.beginPath(); ctx.arc(ejeOjoX, c.y - 4, 3, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(ejeOjoX + 12, c.y - 4, 3, 0, Math.PI * 2); ctx.fill();
+                // Boca asustada (O)
+                ctx.fillStyle = "#3e2723"; ctx.beginPath(); ctx.arc(ejeOjoX + 6, c.y + 11, 4, 0, Math.PI * 2); ctx.fill();
+            }
+            else {
+                // Ojos Normales Limpios
+                ctx.fillStyle = "#fff";
+                ctx.beginPath(); ctx.arc(ejeOjoX, c.y - 4, 7, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(ejeOjoX + 13, c.y - 4, 7, 0, Math.PI * 2); ctx.fill();
+
+                ctx.fillStyle = "#4e342e"; // Iris Castaño
+                let mirarX = esPlayer ? 1 : -1;
+                ctx.beginPath(); ctx.arc(ejeOjoX + mirarX, c.y - 4, 4, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(ejeOjoX + 13 + mirarX, c.y - 4, 4, 0, Math.PI * 2); ctx.fill();
+
+                ctx.fillStyle = "#000"; // Pupila
+                ctx.beginPath(); ctx.arc(ejeOjoX + mirarX, c.y - 4, 2, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(ejeOjoX + 13 + mirarX, c.y - 4, 2, 0, Math.PI * 2); ctx.fill();
+
+                // Puntos de luz blanca (Efecto de brillo vivo)
+                ctx.fillStyle = "#fff";
+                ctx.beginPath(); ctx.arc(ejeOjoX + mirarX - 1, c.y - 6, 1, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(ejeOjoX + 12 + mirarX, c.y - 6, 1, 0, Math.PI * 2); ctx.fill();
+
+                // Sonrisa competitiva
+                ctx.strokeStyle = "#000"; ctx.lineWidth = 2.5; ctx.beginPath();
+                ctx.arc(ejeOjoX + 6, c.y + 4, 6, 0.1, Math.PI - 0.1); ctx.stroke();
+            }
+        }
+
+        function drawBall() {
+            if (Math.abs(ball.vx) > 7) {
+                ball.historial.forEach((pos, index) => {
+                    ctx.fillStyle = `rgba(255, 193, 7, ${0.08 * index})`;
+                    ctx.beginPath(); ctx.arc(pos.x, pos.y, ball.radius * (0.6 + index * 0.1), 0, Math.PI * 2); ctx.fill();
+                });
+            }
+
+            ctx.save(); ctx.translate(ball.x, ball.y); ctx.rotate(ball.angulo);
+            ctx.fillStyle = "#f8f9fa"; ctx.beginPath(); ctx.arc(0, 0, ball.radius, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = "#1a1a24"; ctx.beginPath(); ctx.arc(0, 0, 6, 0, Math.PI * 2); ctx.fill();
+            for (let i = 0; i < 5; i++) {
+                let ang = (Math.PI * 2 / 5) * i;
+                let bx = Math.cos(ang) * 14; let by = Math.sin(ang) * 14;
+                ctx.beginPath(); ctx.arc(bx, by, 4.5, 0, Math.PI * 2); ctx.fill();
+            }
+            ctx.restore();
+
+            let shadowGrad = ctx.createRadialGradient(ball.x - 5, ball.y - 5, 2, ball.x, ball.y, ball.radius);
+            shadowGrad.addColorStop(0, "rgba(255,255,255,0.22)"); shadowGrad.addColorStop(1, "rgba(0,0,0,0.5)");
+            ctx.fillStyle = shadowGrad; ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2); ctx.fill();
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawStadium(); drawGoalpost(arcoIzquierdo, true); drawGoalpost(arcoDerecho, false);
+            drawCharacter(player); drawCharacter(rival); drawBall();
+
+            if (congelarPorGol > 0) {
+                partculasConfeti.forEach(p => {
+                    ctx.fillStyle = p.color;
+                    ctx.save();
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate(p.rotacion);
+                    ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+                    ctx.save(); ctx.restore(); ctx.restore();
+                });
+            }
+
+            // --- NUEVO TABLERO ELECTRÓNICO REMASTERIZADO ---
+            let centroX = canvas.width / 2;
+            let marcadorW = 200, marcadorH = 46, marcadorY = 12;
+
+            // Sombra y Cuerpo del Marcador
+            ctx.shadowColor = "rgba(0,0,0,0.6)"; ctx.shadowBlur = 12;
+            let marcadorGrad = ctx.createLinearGradient(centroX, marcadorY, centroX, marcadorY + marcadorH);
+            marcadorGrad.addColorStop(0, "#1f242d");
+            marcadorGrad.addColorStop(1, "#0d1117");
+            ctx.fillStyle = marcadorGrad;
+
+            // Dibujar rectángulo con esquinas redondeadas manualmente
+            ctx.beginPath();
+            ctx.roundRect(centroX - marcadorW / 2, marcadorY, marcadorW, marcadorH, 12);
+            ctx.fill();
+
+            // Borde con brillo Neón de fondo
+            ctx.shadowBlur = 0; // Reset
+            ctx.strokeStyle = "#30363d"; ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Goles Local (Izquierda) - Verde Neón
+            ctx.fillStyle = "#4caf50";
+            ctx.font = "bold 24px 'Impact', sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText(player.score, centroX - 65, marcadorY + 32);
+
+            // Goles Rival (Derecha) - Blanco/Gris Claro
+            ctx.fillStyle = "#f8f9fa";
+            ctx.fillText(rival.score, centroX + 65, marcadorY + 32);
+
+            // Divisor Central / Decorativo
+            ctx.fillStyle = "rgba(255,255,255,0.1)";
+            ctx.fillRect(centroX - 40, marcadorY + 8, 1, marcadorH - 16);
+            ctx.fillRect(centroX + 40, marcadorY + 8, 1, marcadorH - 16);
+
+            // Cronómetro Digital Central
+            let textoTiempo = modoGolDeOro ? "O RO" : `${tiempoRestante}s`;
+            document.getElementById("ui-timer").innerText = textoTiempo;
+
+            ctx.fillStyle = modoGolDeOro ? "#ff3d00" : "#ffc107"; // Amarillo oro o rojo peligro
+            ctx.font = "bold 16px 'Courier New', monospace";
+            ctx.fillText(textoTiempo, centroX, marcadorY + 29);
+
+            // --- CARTEL FLOTANTE DE GOL EXTREMO ---
+            if (cartelGolTimer > 0) {
+                ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                let gradCartel = ctx.createLinearGradient(0, 160, 0, 270);
+                gradCartel.addColorStop(0, "#ffd700");
+                gradCartel.addColorStop(1, "#ff8f00");
+                ctx.fillStyle = gradCartel;
+                ctx.font = "bold 72px 'Impact', sans-serif";
+                ctx.textAlign = "center";
+                ctx.shadowColor = "rgba(0,0,0,0.5)";
+                ctx.shadowBlur = 10;
+                ctx.fillText("¡¡¡GOOOOOOL!!!", centroX, 235);
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        function gameLoop() { update(); render(); }
+        setInterval(gameLoop, 1000 / 60);
+    </script>
+
+</body>
+
+</html>
