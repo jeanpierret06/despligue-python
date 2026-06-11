@@ -11,13 +11,10 @@ app = Flask(__name__)
 # =================================================================
 def obtener_conexion_db():
     """Detecta el entorno y extrae los parámetros directamente de la URL."""
-    # En tu PC local usará la cadena externa por defecto (la larga con .render.com)
-    # En Render, leerá la variable que configuraste en su panel de control
     cadena_conexion = os.environ.get('DATABASE_URL') or "postgresql://sena_t4sc_user:BRtyaeq8r7Jc7AKTlgRGrhN4Qiv2g1BF@dpg-d8f3fdurnols73am6030-a.oregon-postgres.render.com/sena_t4sc"
     
     url = urlparse(cadena_conexion)
     
-    # CORRECCIÓN: Usar los atributos nativos de urlparse correctamente
     username = url.username
     password = url.password
     host = url.hostname
@@ -46,6 +43,19 @@ def validar_datos(datos):
         return "La ficha debe ser numérica (5-8 dígitos)."
     return None
 
+def formatear_resultados(resultado):
+    """Convierte de forma segura las filas de pg8000 en diccionarios controlando nulos."""
+    columnas = ['documento', 'nombre', 'correo', 'programa', 'ficha']
+    if not resultado:
+        return []
+    
+    estudiantes = []
+    for fila in resultado:
+        # Si la fila está vacía o no tiene la longitud de las columnas, la ignoramos
+        if getattr(fila, "__len__", lambda: 0)() == len(columnas):
+            estudiantes.append(dict(zip(columnas, fila)))
+    return estudiantes
+
 # ==========================================
 # VISTA 1: CONTROL DE ESTUDIANTES (RAÍZ)
 # ==========================================
@@ -69,19 +79,10 @@ def index():
             query = "SELECT documento, nombre, correo, programa, ficha FROM estudiantes ORDER BY id DESC"
             resultado = conn.run(query)
             
-        columnas = ['documento', 'nombre', 'correo', 'programa', 'ficha']
-        estudiantes_visibles = [dict(zip(columnas, fila)) for fila in resultado]
+        estudiantes_visibles = formatear_resultados(resultado)
         
     except Exception as e:
-        # VISUALIZADOR DE ERRORES EXPLICITO: Rompe el Error 500 y te muestra el daño real
-        return f"""
-        <div style="background-color: #ffe6e6; padding: 25px; border: 3px solid #ff3333; font-family: monospace; margin: 50px auto; max-width: 800px; border-radius: 8px;">
-            <h2 style="color: #cc0000; margin-top: 0;">⚠️ Detalle del Error en el Servidor</h2>
-            <p><strong>Excepción capturada:</strong> {str(e)}</p>
-            <hr style="border: 0; border-top: 1px solid #ff9999;">
-            <p style="color: #555;">Este texto te dirá si el problema es de autenticación (password), de red (timeout) o si falta alguna columna en PostgreSQL.</p>
-        </div>
-        """, 500
+        return f"Error de conexión a la base de datos: {str(e)}", 500
 
     return render_template(
         "index.html", 
@@ -105,8 +106,7 @@ def registrar():
         if error:
             conn = obtener_conexion_db()
             resultado = conn.run("SELECT documento, nombre, correo, programa, ficha FROM estudiantes ORDER BY id DESC")
-            columnas = ['documento', 'nombre', 'correo', 'programa', 'ficha']
-            estudiantes_actuales = [dict(zip(columnas, fila)) for fila in resultado]
+            estudiantes_actuales = formatear_resultados(resultado)
             return render_template("index.html", estudiantes=estudiantes_actuales, error_validacion=error, busqueda_actual="")
         
         conn = obtener_conexion_db()
@@ -116,8 +116,7 @@ def registrar():
                           datos_formulario['documento'], datos_formulario['correo'])
         if existe:
             resultado = conn.run("SELECT documento, nombre, correo, programa, ficha FROM estudiantes ORDER BY id DESC")
-            columnas = ['documento', 'nombre', 'correo', 'programa', 'ficha']
-            estudiantes_actuales = [dict(zip(columnas, fila)) for fila in resultado]
+            estudiantes_actuales = formatear_resultados(resultado)
             return render_template("index.html", estudiantes=estudiantes_actuales, error_validacion="El documento o correo ya existen.", busqueda_actual="")
 
         query = """
@@ -134,16 +133,13 @@ def registrar():
         return redirect(url_for('index'))
         
     except Exception as e:
-        # INTERCEPTOR: Rompe la pantalla 500 y muestra el mensaje real de la base de datos
         return f"""
         <div style="background-color: #ffe6e6; padding: 25px; border: 3px solid #ff3333; font-family: monospace; margin: 50px auto; max-width: 800px; border-radius: 8px;">
-            <h2 style="color: #cc0000; margin-top: 0;">⚠️ Error al Intentar Registrar Estudiante</h2>
-            <p><strong>Excepción exacta del backend:</strong> {str(e)}</p>
-            <hr style="border: 0; border-top: 1px solid #ff9999;">
-            <p style="color: #555;">Este mensaje te dirá qué dato o columna está rechazando PostgreSQL al procesar el INSERT.</p>
+            <h2 style="color: #cc0000; margin-top: 0;">⚠️ Error al registrar</h2>
+            <p><strong>Excepción:</strong> {str(e)}</p>
         </div>
         """, 500
-        
+
 @app.route("/limpiar")
 def limpiar():
     try:
