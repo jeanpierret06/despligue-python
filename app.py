@@ -1,13 +1,13 @@
 from flask import Flask, render_template, request, redirect, url_for
 import re
 import os
-from urllib.parse import urlparse  # Biblioteca nativa para desestructurar la URL de la base de datos
+from urllib.parse import urlparse
 from pg8000.native import Connection, DatabaseError
 
 app = Flask(__name__)
 
 # =================================================================
-# CONFIGURACIÓN Y CONEXIÓN A POSTGRESQL (PG8000 NATIVE REPARADO)
+# CONFIGURACIÓN Y CONEXIÓN A POSTGRESQL
 # =================================================================
 def obtener_conexion_db():
     """Detecta el entorno y extrae los parámetros directamente de la URL."""
@@ -43,15 +43,38 @@ def validar_datos(datos):
         return "La ficha debe ser numérica (5-8 dígitos)."
     return None
 
-def formatear_resultados(resultado):
-    """Mapea las filas a diccionarios de forma directa y segura."""
-    columnas = ['documento', 'nombre', 'correo', 'programa', 'ficha']
-    # Si la base de datos está vacía y retorna None o [], devolvemos lista vacía inmediatamente
-    if not resultado:
+def consultar_estudiantes(conn, criterio=None):
+    """Realiza la consulta usando 'documentoc' tal como está en la DB."""
+    try:
+        if criterio:
+            # CORRECCIÓN: Se cambia 'documento' por 'documentoc' en el SELECT y WHERE
+            query = """
+                SELECT documentoc, nombre, correo, programa, ficha 
+                FROM estudiantes 
+                WHERE LOWER(documentoc) LIKE :1 OR LOWER(nombre) LIKE :2
+                ORDER BY id DESC
+            """
+            valor_busqueda = f"%{criterio}%"
+            resultado = conn.run(query, valor_busqueda, valor_busqueda)
+        else:
+            # CORRECCIÓN: Se cambia 'documento' por 'documentoc'
+            query = "SELECT documentoc, nombre, correo, programa, ficha FROM estudiantes ORDER BY id DESC"
+            resultado = conn.run(query)
+        
+        if not resultado:
+            return []
+            
+        # El mapeo al diccionario sigue usando 'documento' para no romper tu archivo index.html
+        columnas = ['documento', 'nombre', 'correo', 'programa', 'ficha']
+        estudiantes = []
+        
+        for fila in resultado:
+            if isinstance(fila, (list, tuple)) and len(fila) == 5:
+                estudiantes.append(dict(zip(columnas, fila)))
+                
+        return estudiantes
+    except Exception:
         return []
-    
-    # Construcción limpia: solo mapea si la fila tiene exactamente 5 columnas
-    return [dict(zip(columnas, fila)) for fila in resultado if isinstance(fila, (list, tuple)) and len(fila) == len(columnas)]
 
 # ==========================================
 # VISTA 1: CONTROL DE ESTUDIANTES (RAÍZ)
@@ -62,22 +85,7 @@ def index():
     
     try:
         conn = obtener_conexion_db()
-        
-        if criterio:
-            query = """
-                SELECT documento, nombre, correo, programa, ficha 
-                FROM estudiantes 
-                WHERE LOWER(documento) LIKE :1 OR LOWER(nombre) LIKE :2
-                ORDER BY id DESC
-            """
-            valor_busqueda = f"%{criterio}%"
-            resultado = conn.run(query, valor_busqueda, valor_busqueda)
-        else:
-            query = "SELECT documento, nombre, correo, programa, ficha FROM estudiantes ORDER BY id DESC"
-            resultado = conn.run(query)
-            
-        estudiantes_visibles = formatear_resultados(resultado)
-        
+        estudiantes_visibles = consultar_estudiantes(conn, criterio)
     except Exception as e:
         return f"Error de conexión a la base de datos: {str(e)}", 500
 
@@ -100,24 +108,22 @@ def registrar():
         }
         
         error = validar_datos(datos_formulario)
-        if error:
-            conn = obtener_conexion_db()
-            resultado = conn.run("SELECT documento, nombre, correo, programa, ficha FROM estudiantes ORDER BY id DESC")
-            estudiantes_actuales = formatear_resultados(resultado)
-            return render_template("index.html", estudiantes=estudiantes_actuales, error_validacion=error, busqueda_actual="")
-        
         conn = obtener_conexion_db()
         
-        # Validar duplicados usando marcadores de pg8000 (:1, :2)
-        existe = conn.run("SELECT id FROM estudiantes WHERE documento = :1 OR correo = :2", 
+        if error:
+            estudiantes_actuales = consultar_estudiantes(conn)
+            return render_template("index.html", estudiantes=estudiantes_actuales, error_validacion=error, busqueda_actual="")
+        
+        # CORRECCIÓN: Se cambia 'documento' por 'documentoc' en la validación de duplicados
+        existe = conn.run("SELECT id FROM estudiantes WHERE documentoc = :1 OR correo = :2", 
                           datos_formulario['documento'], datos_formulario['correo'])
         if existe:
-            resultado = conn.run("SELECT documento, nombre, correo, programa, ficha FROM estudiantes ORDER BY id DESC")
-            estudiantes_actuales = formatear_resultados(resultado)
+            estudiantes_actuales = consultar_estudiantes(conn)
             return render_template("index.html", estudiantes=estudiantes_actuales, error_validacion="El documento o correo ya existen.", busqueda_actual="")
 
+        # CORRECCIÓN: Se cambia 'documento' por 'documentoc' en el INSERT
         query = """
-            INSERT INTO estudiantes (documento, nombre, correo, programa, ficha) 
+            INSERT INTO estudiantes (documentoc, nombre, correo, programa, ficha) 
             VALUES (:1, :2, :3, :4, :5)
         """
         conn.run(query, 
@@ -132,7 +138,7 @@ def registrar():
     except Exception as e:
         return f"""
         <div style="background-color: #ffe6e6; padding: 25px; border: 3px solid #ff3333; font-family: monospace; margin: 50px auto; max-width: 800px; border-radius: 8px;">
-            <h2 style="color: #cc0000; margin-top: 0;">⚠️ Error crítico detectado</h2>
+            <h2 style="color: #cc0000; margin-top: 0;">⚠️ Error al registrar</h2>
             <p><strong>Mensaje:</strong> {str(e)}</p>
         </div>
         """, 500
