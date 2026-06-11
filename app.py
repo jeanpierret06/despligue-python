@@ -1,18 +1,34 @@
 from flask import Flask, render_template, request, redirect, url_for
 import re
 import os
+from urllib.parse import urlparse  # Biblioteca nativa para desestructurar la URL de la base de datos
 from pg8000.native import Connection, DatabaseError
 
 app = Flask(__name__)
 
 # =================================================================
-# CONFIGURACIÓN Y CONEXIÓN A POSTGRESQL (PG8000 NATIVE)
+# CONFIGURACIÓN Y CONEXIÓN A POSTGRESQL (PG8000 NATIVE REPARADO)
 # =================================================================
-DATABASE_URL = os.environ.get('DATABASE_URL') or "postgresql://usuario:contraseña@host:puerto/nombre_bd"
-
 def obtener_conexion_db():
-    """Establece la conexión utilizando el método from_url de pg8000.native."""
-    return Connection.from_url(DATABASE_URL)
+    """Establece la conexión de forma directa usando las credenciales explícitas."""
+    
+    # Ponemos comillas a cada valor para que Python los reconozca como texto (Strings)
+    username = "sena_t4sc_user"
+    password = "BRtyaeq8r7Jc7AKTlgRGrhN4Qiv2g1BF"
+    
+    # IMPORTANTE: Eliminamos el '@' inicial del host para evitar fallos de resolución de DNS
+    host = "dpg-d8f3fdurnols73am6030-a.oregon-postgres.render.com"
+    
+    port = 5432
+    database = "sena_t4sc"
+    
+    return Connection(
+        user=username,
+        password=password,
+        host=host,
+        port=port,
+        database=database
+    )
 
 def validar_datos(datos):
     if not all(str(valor).strip() for valor in datos.values()):
@@ -38,7 +54,6 @@ def index():
         conn = obtener_conexion_db()
         
         if criterio:
-            # pg8000.native utiliza :1, :2 para los marcadores de posición posicionales
             query = """
                 SELECT documento, nombre, correo, programa, ficha 
                 FROM estudiantes 
@@ -89,7 +104,6 @@ def registrar():
         existe = conn.run("SELECT id FROM estudiantes WHERE documento = :1 OR correo = :2", 
                           datos_formulario['documento'], datos_formulario['correo'])
         if existe:
-            conn = obtener_conexion_db()
             resultado = conn.run("SELECT documento, nombre, correo, programa, ficha FROM estudiantes ORDER BY id DESC")
             columnas = ['documento', 'nombre', 'correo', 'programa', 'ficha']
             estudiantes_actuales = [dict(zip(columnas, fila)) for fila in resultado]
