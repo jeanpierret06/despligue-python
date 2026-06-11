@@ -17,6 +17,7 @@ def obtener_conexion_db():
     
     url = urlparse(cadena_conexion)
     
+    # CORRECCIÓN: Usar los atributos nativos de urlparse correctamente
     username = url.username
     password = url.password
     host = url.hostname
@@ -31,6 +32,7 @@ def obtener_conexion_db():
         database=database,
         timeout=15
     )
+
 def validar_datos(datos):
     if not all(str(valor).strip() for valor in datos.values()):
         return "Todos los campos son obligatorios."
